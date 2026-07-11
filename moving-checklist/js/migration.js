@@ -10,7 +10,7 @@ export function toImportState(oldState) {
   delete profile.username;
   return {
     profile,
-    move: src.move,
+    move: src.move || {},
     tasks: src.tasks || [],
     meta: src.meta || { onboarded: true, schemaVersion: 1 },
   };

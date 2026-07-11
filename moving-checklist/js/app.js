@@ -105,5 +105,6 @@ window.addEventListener("DOMContentLoaded", () => {
     return;
   }
   store.configure(fsDeps);
+  main().innerHTML = "<h1>MoveAddress</h1><p class=\"muted\">Loading…</p>";
   auth.onAuth(authDeps, onUser);
 });
