@@ -1,30 +1,49 @@
 # MoveAddress — Moving Checklist
 
-Static, password-protected moving address-change checklist.
+Static, Google-sign-in moving address-change checklist.
 Live: https://proxy-eval-max.github.io/moving-checklist/
 
 ## How it works
-- Each profile is one AES-GCM-encrypted file in `data/<username>.enc.json`.
-- Your password derives the encryption key (PBKDF2, 250k iterations) — it is never stored.
-- Reading works unauthenticated (public repo). Saving needs a fine-grained GitHub
-  Personal Access Token (this repo only, Contents: read & write), pasted once and kept
-  in your browser's localStorage.
+- Sign in with Google (Firebase Auth). No passwords, no tokens.
+- Each user's checklist is a Firestore document `users/<uid>`, readable/writable only by
+  that signed-in user (enforced by Firestore security rules).
+- Frontend is a static site on GitHub Pages; the browser talks to Firebase directly.
 
-## Create the first profiles
-1. Open the site, use "Create a profile", pick a username (e.g. `anirudh`), a password
-   (min 8 chars), and paste your token.
-2. Complete onboarding to generate the checklist.
-3. Repeat for other people (e.g. `rwik`).
+## Firebase setup (one time, by the project owner)
+1. Create a Firebase project (console.firebase.google.com).
+2. Authentication → Sign-in method → enable **Google**.
+3. Create a **Cloud Firestore** database (production mode).
+4. Authentication → Settings → Authorized domains → add `proxy-eval-max.github.io`
+   (and `localhost` for local testing).
+5. Publish these Firestore rules:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /users/{uid} {
+         allow read, write: if request.auth != null && request.auth.uid == uid;
+       }
+     }
+   }
+   ```
+6. Copy your web app config into `js/firebase-config.js` (replace the `REPLACE_ME` values).
+   This config is not a secret — security comes from Auth + the rules above.
+
+## Importing an old profile
+The previous version stored password-encrypted profiles in the repo. After signing in,
+go to **Settings → Import old checklist**, enter the old username + password once, and it
+imports into your Firebase account.
 
 ## Develop / test
 No build step. Run the logic tests with Node 26+:
 ```
 cd moving-checklist && node --test 'tests/*.test.js'
 ```
-Serve locally: `python3 -m http.server -d moving-checklist 8099`
+Serve locally: `python3 -m http.server -d moving-checklist 8099` (Firebase needs a real
+config and `localhost` in Authorized domains to function).
 
 ## Security notes
-- The login is not an access wall (all code is public), but the data is genuinely
-  encrypted and unreadable without the password.
+- Access control is server-enforced by Firestore rules.
+- Data is stored plaintext in Firestore (readable by the project's Firebase admins/Google).
 - No sensitive identifiers (SSN, license, passport, bank numbers) are collected.
 - Informational only — not legal advice.
