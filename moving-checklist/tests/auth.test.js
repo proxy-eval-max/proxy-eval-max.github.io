@@ -1,49 +1,58 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import * as auth from "../js/auth.js";
-import * as store from "../js/store.js";
-import * as realCrypto from "../js/crypto.js";
+import { signInWithGoogle, logout, onAuth, currentUser } from "../js/auth.js";
 
-function memGithub() {
-  const files = new Map();
-  return { files,
-    dataPath: (u) => `moving-checklist/data/${u}.enc.json`,
-    async getFile(path) { return files.has(path) ? { text: files.get(path), sha: "s1" } : null; },
-    async putFile(path, text) { files.set(path, text); return { sha: "s2" }; },
-    async deleteFile(path) { files.delete(path); return true; } };
+function fakeDeps(overrides = {}) {
+  const calls = { signIn: 0, signOut: 0, onAuth: 0 };
+  const deps = {
+    calls,
+    auth: { currentUser: overrides.currentUser ?? null },
+    provider: { name: "google" },
+    signInWithPopup: async (auth, provider) => {
+      calls.signIn++; assert.equal(provider.name, "google");
+      if (overrides.signInError) throw overrides.signInError;
+      return { user: { uid: "u1", displayName: "Rwik" } };
+    },
+    signOut: async () => { calls.signOut++; },
+    onAuthStateChanged: (auth, cb) => { calls.onAuth++; calls.cb = cb; return () => { calls.unsub = true; }; },
+  };
+  return deps;
 }
 
-test("validUsername enforces charset", () => {
-  assert.equal(auth.validUsername("anirudh"), true);
-  assert.equal(auth.validUsername("rwik_2"), true);
-  assert.equal(auth.validUsername("bad name"), false);
-  assert.equal(auth.validUsername("../etc"), false);
+test("signInWithGoogle returns the user on success", async () => {
+  const deps = fakeDeps();
+  const user = await signInWithGoogle(deps);
+  assert.equal(user.uid, "u1");
+  assert.equal(deps.calls.signIn, 1);
 });
 
-test("createProfile then login works; second create throws exists", async () => {
-  const gh = memGithub();
-  store.__setDeps({ github: gh, crypto: realCrypto });
-  auth.__setDeps({ store, github: gh, crypto: realCrypto });
-  await auth.createProfile("anirudh", "password1", "tok");
-  assert.ok(gh.files.has(gh.dataPath("anirudh")));
-  await assert.rejects(() => auth.createProfile("anirudh", "password1", "tok"), /exists/);
-  store.clear();
-  const st = await auth.login("Anirudh", "password1", "tok");
-  assert.equal(st.profile.username, "anirudh");
+test("signInWithGoogle maps popup-closed", async () => {
+  const deps = fakeDeps({ signInError: { code: "auth/popup-closed-by-user" } });
+  await assert.rejects(() => signInWithGoogle(deps), /popup-closed/);
 });
 
-test("createProfile rejects short password", async () => {
-  const gh = memGithub();
-  store.__setDeps({ github: gh, crypto: realCrypto });
-  auth.__setDeps({ store, github: gh, crypto: realCrypto });
-  await assert.rejects(() => auth.createProfile("bob", "short", "tok"), /weak-password/);
+test("signInWithGoogle maps popup-blocked", async () => {
+  const deps = fakeDeps({ signInError: { code: "auth/popup-blocked" } });
+  await assert.rejects(() => signInWithGoogle(deps), /popup-blocked/);
 });
 
-test("login with wrong password throws bad-credentials", async () => {
-  const gh = memGithub();
-  store.__setDeps({ github: gh, crypto: realCrypto });
-  auth.__setDeps({ store, github: gh, crypto: realCrypto });
-  await auth.createProfile("carol", "password1", "tok");
-  store.clear();
-  await assert.rejects(() => auth.login("carol", "nope", "tok"), /bad-credentials/);
+test("signInWithGoogle maps unknown errors to signin-failed", async () => {
+  const deps = fakeDeps({ signInError: { code: "auth/network-request-failed" } });
+  await assert.rejects(() => signInWithGoogle(deps), /signin-failed/);
+});
+
+test("onAuth registers the callback and logout calls signOut", async () => {
+  const deps = fakeDeps();
+  const cb = () => {};
+  const unsub = onAuth(deps, cb);
+  assert.equal(deps.calls.onAuth, 1);
+  assert.equal(deps.calls.cb, cb);
+  unsub(); assert.equal(deps.calls.unsub, true);
+  await logout(deps);
+  assert.equal(deps.calls.signOut, 1);
+});
+
+test("currentUser reads auth.currentUser", () => {
+  const deps = fakeDeps({ currentUser: { uid: "u9" } });
+  assert.equal(currentUser(deps).uid, "u9");
 });
