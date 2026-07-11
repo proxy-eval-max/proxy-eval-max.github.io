@@ -1,0 +1,15 @@
+{
+  "v": 1,
+  "username": "anirudh",
+  "kdf": {
+    "algo": "PBKDF2",
+    "hash": "SHA-256",
+    "iterations": 250000,
+    "salt": "QF6/uvjkqDWX/PpRXPauWA=="
+  },
+  "cipher": {
+    "algo": "AES-GCM",
+    "iv": "kLYqmtHlFJ+KDrxm"
+  },
+  "ciphertext": "358/wwITn3+KEK+2FndwYORc+hSOxkIdIUmSbJGJO4Hj8TpkIleabermxHfVSpdnMDbXPX5CZvnp6dnFaZz1Gqs5f+bn2Y9YE93vF2e8yU+1uGzDzeXVhHlF8YPk++us/1b9WkvC9ecOf871eZ/GROgztZoE2GlEWRczrbHf7sqOS4jofO3l4cqwo8wrFQYKG+wkiKeDcUqOE6VfgmhQ4t5Snw5vsAm3R0CgYmWsvjuB4uaUI7zxeLOy6l2h4fCwGAZmkfLdQJvDacU9gkD9jFrjEEgWFyz2/LubRBFypAElFnn72h+h412xeHamNORIN3/uiwmdF1SpPE1FMvHsfatQY7NRI6afh8sZMrV2iLgtmjoF9UMG3LwoIMHkkvnRTGqsZ4WwrvwsTUcwHrMeF2/SKpY/wnl8S78afgWADU7rM1EqAhevz4QtdQXCMrcHlu7fxChZrYkmOBGTxefDVfI0UUWhx3R6jvsS42DoJO6WLiLr2tUt0OF0EGEDo+jmsqDTJ1fbwI6qgJbNOODPwjyfI+M4iA=="
+}
