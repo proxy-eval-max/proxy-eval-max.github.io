@@ -29,7 +29,7 @@ export function render(root, ctx, taskId) {
   };
 
   const official = el("a", { href: tpl.officialUrl, target: "_blank", rel: "noopener noreferrer",
-    class: "", text: `Open official ${tpl.agency} website ↗` });
+    class: "primary", text: `Open official ${tpl.agency} website ↗` });
   const copyBtn = el("button", { type: "button", text: "Copy new ZIP" });
   copyBtn.onclick = () => { navigator.clipboard?.writeText(ctx.state.move.newZip || ""); ctx.toast("Copied new ZIP."); };
 
@@ -53,8 +53,7 @@ export function render(root, ctx, taskId) {
       el("h3", { text: "Steps" }),
       el("ol", {}, (tpl.steps || []).map(x => el("li", { text: x }))),
       el("p", { class: "muted", html: "External link is the <strong>official</strong> government/provider site." }),
-      el("div", { class: "row" }, [el("button", { class: "primary", type: "button",
-        onClick: () => window.open(tpl.officialUrl, "_blank", "noopener") }, ["Go to official website"]), copyBtn]),
+      el("div", { class: "row" }, [official, copyBtn]),
     ]),
     el("section", { class: "card" }, [
       el("h3", { text: "Track progress" }),
