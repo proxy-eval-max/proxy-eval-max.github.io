@@ -1,7 +1,6 @@
-import * as defaultGithub from "./github.js";
 import * as defaultCrypto from "./crypto.js";
 
-let github = defaultGithub;
+let github = null;
 let cryptoMod = defaultCrypto;
 export function __setDeps(deps) {
   if (deps.github) github = deps.github;

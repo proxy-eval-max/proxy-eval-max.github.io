@@ -1,8 +1,7 @@
 import * as defaultStore from "./store.js";
-import * as defaultGithub from "./github.js";
 import * as defaultCrypto from "./crypto.js";
 
-let store = defaultStore, github = defaultGithub, cryptoMod = defaultCrypto;
+let store = defaultStore, github = null, cryptoMod = defaultCrypto;
 export function __setDeps(d) {
   if (d.store) store = d.store; if (d.github) github = d.github; if (d.crypto) cryptoMod = d.crypto;
 }
