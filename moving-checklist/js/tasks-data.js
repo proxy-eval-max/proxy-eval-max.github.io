@@ -75,7 +75,7 @@ export const TEMPLATES = [
     id: "tx-dl-address", title: "Update Texas driver license address",
     category: "Mail and identity",
     description: "Change the address on your Texas driver license or ID.",
-    reason: "You own a vehicle / are moving within Texas; your license must reflect your current address.",
+    reason: "You are moving within Texas; your license must reflect your current residential address.",
     priority: "Legally required", offsetDays: 7, timing: "after",
     deadlineNote: "Texas law requires updating within 30 days of moving.",
     officialUrl: "https://www.dps.texas.gov/section/driver-license/change-your-address",

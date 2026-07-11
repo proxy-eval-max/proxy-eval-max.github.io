@@ -12,7 +12,7 @@ test("templates are well-formed with unique ids", () => {
     assert.match(t.id, /^[a-z0-9-]+$/, `bad id ${t.id}`);
     assert.ok(!ids.has(t.id), `dup id ${t.id}`); ids.add(t.id);
     for (const f of ["title","category","description","reason","priority",
-      "timing","officialUrl","agency","method","estTime","verifiedOn"]) {
+      "timing","officialUrl","agency","method","estTime","verifiedOn","deadlineNote","requiredInfo"]) {
       assert.ok(t[f] != null && t[f] !== "", `${t.id} missing ${f}`);
     }
     assert.ok(PRIORITIES.includes(t.priority), `${t.id} bad priority`);
