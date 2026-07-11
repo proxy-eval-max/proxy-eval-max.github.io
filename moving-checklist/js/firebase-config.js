@@ -3,12 +3,13 @@
 // Replace the "REPLACE_ME" values with your project's config from the Firebase console:
 // Project settings → General → Your apps → SDK setup and configuration.
 export const firebaseConfig = {
-  apiKey: "REPLACE_ME",
-  authDomain: "REPLACE_ME.firebaseapp.com",
-  projectId: "REPLACE_ME",
-  storageBucket: "REPLACE_ME.appspot.com",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME",
+  apiKey: "AIzaSyBVHyzTIQ3BkzlIgiaqiNxyZFsJBHz51nI",
+  authDomain: "proxy-eval.firebaseapp.com",
+  projectId: "proxy-eval",
+  storageBucket: "proxy-eval.firebasestorage.app",
+  messagingSenderId: "726735473376",
+  appId: "1:726735473376:web:cc62b2b71ca11db8585e85",
+  measurementId: "G-5EY09X15FH",
 };
 
 export function isConfigured() {
