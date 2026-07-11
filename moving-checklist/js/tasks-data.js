@@ -7,7 +7,7 @@ export const CATEGORIES = [
   "Shopping and subscriptions", "Property and housing",
 ];
 
-const isTX = (a) => (a.newZip || "").startsWith("7");       // TX ZIPs start 75-79/733
+const isTX = (a) => /^7[5-9]/.test(a.newZip || "");       // TX ZIPs start 75-79/733
 const movingToNewState = (a) => a.moveType === "across_states";
 
 export const TEMPLATES = [

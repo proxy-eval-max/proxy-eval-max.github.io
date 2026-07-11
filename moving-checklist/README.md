@@ -17,9 +17,9 @@ Live: https://proxy-eval-max.github.io/moving-checklist/
 3. Repeat for other people (e.g. `rwik`).
 
 ## Develop / test
-No build step. Run the logic tests with Node 20+:
+No build step. Run the logic tests with Node 26+:
 ```
-cd moving-checklist && node --test tests/
+cd moving-checklist && node --test 'tests/*.test.js'
 ```
 Serve locally: `python3 -m http.server -d moving-checklist 8099`
 

@@ -19,7 +19,7 @@ async function save() {
   if (!token) { toast("Add a GitHub token in Settings to save."); return false; }
   try { await store.save(token); toast("Saved."); return true; }
   catch (e) {
-    if (e.message === "conflict") toast("Remote copy changed — reload from Settings.");
+    if (e.message === "conflict") toast("Remote copy changed — log out and back in to reload.");
     else if (e.message === "auth") toast("Token rejected — re-enter it in Settings.");
     else toast("Save failed.");
     return false;

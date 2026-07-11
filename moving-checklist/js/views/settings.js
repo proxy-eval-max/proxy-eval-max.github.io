@@ -21,7 +21,9 @@ export function render(root, ctx) {
   regen.onclick = async () => {
     st.move.newZip = zip.value; st.move.moveDate = date.value;
     st.tasks = mergeTasks(st.tasks || [], st.move);
-    await ctx.save(); ctx.toast("Checklist updated."); ctx.navigate("#/");
+    const ok = await ctx.save();
+    if (ok) ctx.toast("Checklist updated.");
+    ctx.navigate("#/");
   };
 
   // Backup
