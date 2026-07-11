@@ -1,17 +1,16 @@
-import * as defaultCrypto from "./crypto.js";
+import * as defaultFs from "./firestore.js";
 
-let github = null;
-let cryptoMod = defaultCrypto;
-export function __setDeps(deps) {
-  if (deps.github) github = deps.github;
-  if (deps.crypto) cryptoMod = deps.crypto;
-}
+let fs = defaultFs;
+let fsDeps = null; // set at boot via configure(), or in tests via __setDeps
 
-let mem = { state: null, username: null, password: null, sha: null };
+export function configure(deps) { fsDeps = deps; }
+export function __setDeps(d) { if (d.fs) fs = d.fs; if (d.fsDeps !== undefined) fsDeps = d.fsDeps; }
 
-export function emptyState(username) {
+let mem = { state: null, uid: null };
+
+export function emptyState() {
   return {
-    profile: { username, createdAt: null },
+    profile: { createdAt: null },
     move: { oldZip: "", newZip: "", moveDate: "", moveType: "", housing: "",
       hasVehicle: false, utilitiesIncluded: false, voter: false, children: false,
       pets: false, benefits: false, immigration: "prefer_not", professionalLicenses: false,
@@ -20,40 +19,27 @@ export function emptyState(username) {
   };
 }
 
-export async function load(username, password, token) {
-  const path = github.dataPath(username);
-  const file = await github.getFile(path, token);
-  if (!file) throw new Error("no-profile");
-  const blob = JSON.parse(file.text);
-  const state = await cryptoMod.decrypt(password, blob); // throws decrypt-failed
-  mem = { state, username, password, sha: file.sha };
-  return state;
+export async function load(uid) {
+  const data = await fs.loadUserState(fsDeps, uid);
+  mem = { state: data, uid };
+  return data; // null if new user
 }
-
+export function startFresh(uid) { mem = { state: emptyState(), uid }; return mem.state; }
 export function getState() { return mem.state; }
 export function setState(next) { mem.state = next; }
-export function session() { return { username: mem.username, hasState: !!mem.state }; }
-export function clear() { mem = { state: null, username: null, password: null, sha: null }; }
+export function importState(state) { mem.state = state; }
+export function session() { return { uid: mem.uid, hasState: !!mem.state }; }
+export function clear() { mem = { state: null, uid: null }; }
 
-async function encryptCurrent() {
-  const blob = await cryptoMod.encrypt(mem.password, mem.state);
-  return JSON.stringify(
-    { v: 1, username: mem.username, ...blob }, null, 2);
-}
-
-export async function exportBlobText() { return encryptCurrent(); }
-
-export async function save(token) {
-  const path = github.dataPath(mem.username);
-  const text = await encryptCurrent();
-  const res = await github.putFile(path, text, `Update ${mem.username} checklist`, mem.sha, token);
-  mem.sha = res.sha;
+export async function save() {
+  if (!mem.uid || !mem.state) throw new Error("no-session");
+  await fs.saveUserState(fsDeps, mem.uid, mem.state);
   return true;
 }
-
-export async function remove(token) {
-  const path = github.dataPath(mem.username);
-  await github.deleteFile(path, `Delete ${mem.username} profile`, mem.sha, token);
+export async function remove() {
+  if (!mem.uid) throw new Error("no-session");
+  await fs.deleteUserState(fsDeps, mem.uid);
   clear();
   return true;
 }
+export function exportText() { return JSON.stringify(mem.state, null, 2); }

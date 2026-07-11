@@ -1,48 +1,57 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as store from "../js/store.js";
-import * as realCrypto from "../js/crypto.js";
 
-function memGithub() {
-  const files = new Map();
+// Fake firestore module backed by an in-memory map (ignores fsDeps).
+function memFs() {
+  const m = new Map();
   return {
-    files,
-    dataPath: (u) => `moving-checklist/data/${u}.enc.json`,
-    async getFile(path) { return files.has(path) ? { text: files.get(path), sha: "s" + files.size } : null; },
-    async putFile(path, text) { files.set(path, text); return { sha: "s" + files.size }; },
-    async deleteFile(path) { files.delete(path); return true; },
+    _m: m,
+    async loadUserState(_deps, uid) { return m.has(uid) ? JSON.parse(m.get(uid)) : null; },
+    async saveUserState(_deps, uid, state) { m.set(uid, JSON.stringify(state)); return true; },
+    async deleteUserState(_deps, uid) { m.delete(uid); return true; },
   };
 }
 
-test("load throws no-profile when file missing", async () => {
-  store.__setDeps({ github: memGithub(), crypto: realCrypto });
-  await assert.rejects(() => store.load("ghost", "pw", "tok"), /no-profile/);
-});
-
-test("save then load round-trips state", async () => {
-  const gh = memGithub();
-  store.__setDeps({ github: gh, crypto: realCrypto });
-  // seed a profile by encrypting an empty state directly
-  const st = store.emptyState("anirudh");
-  st.meta.onboarded = true; st.move.newZip = "78701";
-  const blob = await realCrypto.encrypt("pw", st);
-  gh.files.set(gh.dataPath("anirudh"), JSON.stringify(blob));
-
-  const loaded = await store.load("anirudh", "pw", "tok");
-  assert.equal(loaded.move.newZip, "78701");
-  loaded.move.moveDate = "2026-08-01";
-  store.setState(loaded);
-  await store.save("tok");
-
+test("load returns null for a new user", async () => {
+  store.__setDeps({ fs: memFs(), fsDeps: {} });
   store.clear();
-  const again = await store.load("anirudh", "pw", "tok");
-  assert.equal(again.move.moveDate, "2026-08-01");
+  assert.equal(await store.load("newuser"), null);
 });
 
-test("load with wrong password throws decrypt-failed", async () => {
-  const gh = memGithub();
-  store.__setDeps({ github: gh, crypto: realCrypto });
-  const blob = await realCrypto.encrypt("right", store.emptyState("bob"));
-  gh.files.set(gh.dataPath("bob"), JSON.stringify(blob));
-  await assert.rejects(() => store.load("bob", "wrong", "tok"), /decrypt-failed/);
+test("startFresh gives an empty, un-onboarded state", async () => {
+  store.__setDeps({ fs: memFs(), fsDeps: {} });
+  const st = store.startFresh("u1");
+  assert.equal(st.meta.onboarded, false);
+  assert.deepEqual(st.tasks, []);
+  assert.equal(st.move.immigration, "prefer_not");
+  assert.equal("username" in st.profile, false);
+});
+
+test("setState + save + reload round-trips via firestore", async () => {
+  const fs = memFs();
+  store.__setDeps({ fs, fsDeps: {} });
+  const st = store.startFresh("u1");
+  st.meta.onboarded = true; st.move.newZip = "78701";
+  store.setState(st);
+  await store.save();
+  store.clear();
+  const again = await store.load("u1");
+  assert.equal(again.move.newZip, "78701");
+  assert.equal(again.meta.onboarded, true);
+});
+
+test("remove deletes the doc and clears the session", async () => {
+  const fs = memFs();
+  store.__setDeps({ fs, fsDeps: {} });
+  store.startFresh("u1"); await store.save();
+  await store.remove();
+  assert.equal(store.getState(), null);
+  assert.equal(await store.load("u1"), null);
+});
+
+test("save with no session throws no-session", async () => {
+  store.__setDeps({ fs: memFs(), fsDeps: {} });
+  store.clear();
+  await assert.rejects(() => store.save(), /no-session/);
 });
