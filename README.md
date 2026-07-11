@@ -4,6 +4,11 @@
 > [README](./moving-checklist/README.md) for setup.
 
 # proxy-eval-max.github.io
+
+**MoveAddress** is a password-protected web app that builds a personalized moving address-change checklist. Tell it where and when you're moving, and it generates a prioritized, deadline-aware list of every organization, account, and government agency to notify — with official links, progress tracking, and confirmation numbers. Each person has their own profile, encrypted with their password (PBKDF2 + AES-GCM) and synced to this repo, so no one else can read their data. It runs entirely as a static site on GitHub Pages at [`/moving-checklist/`](https://proxy-eval-max.github.io/moving-checklist/).
+
+The rest of this document is the full product plan the app is based on.
+
 # Website Product Plan: MoveAddress
 
 ## 1. Product overview
