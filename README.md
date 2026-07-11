@@ -1,3 +1,8 @@
+> **Live app:** A working MVP of this product is deployed at
+> [`/moving-checklist/`](https://proxy-eval-max.github.io/moving-checklist/).
+> Source is in [`moving-checklist/`](./moving-checklist/). See its
+> [README](./moving-checklist/README.md) for setup.
+
 # proxy-eval-max.github.io
 # Website Product Plan: MoveAddress
 
