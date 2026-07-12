@@ -59,12 +59,13 @@ function sortTasks(list) {
     category: (a, b) => (tpl(a).category || "").localeCompare(tpl(b).category || ""),
     time: (a, b) => (tpl(a).estTime || "").localeCompare(tpl(b).estTime || ""),
   }[by];
-  return list.slice().sort(cmp);
+  const doneRank = (t) => (DONE.has(t.status) ? 1 : 0);
+  return list.slice().sort((a, b) => (doneRank(a) - doneRank(b)) || cmp(a, b));
 }
 function row(t) {
   const tpl = templateOf(t.templateId) || {};
   const cls = "badge " + (tpl.priority || "").toLowerCase().replace(/\s+/g, "-");
-  return el("li", {}, [
+  return el("li", DONE.has(t.status) ? { class: "done" } : {}, [
     el("div", { class: "row" }, [
       el("a", { href: `#/task/${t.id}`, text: tpl.title || t.id }),
       el("span", { class: cls, text: tpl.priority || "" }),

@@ -50,5 +50,8 @@ ul.tasklist { list-style:none; padding:0; }
 ul.tasklist li { border:1px solid var(--line); border-radius:8px; padding:12px;
   margin:8px 0; background:var(--bg); }
 ul.tasklist a { color:var(--fg); text-decoration:none; font-weight:600; }
+ul.tasklist li.done { opacity:.5; background:var(--card); }
+ul.tasklist li.done a { text-decoration:line-through; }
+ul.tasklist li.done:hover, ul.tasklist li.done:focus-within { opacity:1; }
 .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 @media (max-width:560px){ #main{padding:12px;} .ring{width:96px;height:96px;} }
