@@ -129,9 +129,13 @@ function updatePlate() {
     const role = v.tilt === "empty" ? "empty"
       : !v.payer ? "level"
       : m.id === v.payer ? "next" : "ahead";
+    const name = nameOf(m.id);
     panel.dataset.role = role;
     qs(".eyebrow", panel).textContent = EYEBROW[role];
-    qs(".name", panel).textContent = nameOf(m.id);
+    qs(".name", panel).textContent = name;
+    // How wide a name is depends on how long it is, and CSS can't count. The
+    // stylesheet divides the panel width by this to keep it on one line.
+    panel.style.setProperty("--len", Math.max(name.length, 4));
   }
 
   qs("#verdict-note").textContent =

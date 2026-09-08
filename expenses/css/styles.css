@@ -158,6 +158,11 @@ body {
   transition: flex-basis .55s var(--ease), background .4s var(--ease),
               border-color .4s var(--ease), opacity .4s var(--ease);
 }
+/* The panels size each other: at the widest tilt the receded one is barely a
+   quarter of the plate, and a name set at a fixed size breaks mid-word there.
+   Making each panel a query container lets its name scale to the space it
+   actually got, rather than to the viewport, which knows nothing about --split. */
+.panel { container-type: inline-size; }
 .panel[data-who="p1"] { --who: var(--who-1); }
 .panel[data-who="p2"] { --who: var(--who-2); }
 
@@ -169,6 +174,11 @@ body {
   color: var(--dim);
   overflow-wrap: anywhere;
   transition: color .4s var(--ease), font-size .55s var(--ease);
+  /* Width alone isn't enough — a name has to fit in one line, and how wide it
+     is depends on how many characters it has. --len is the character count,
+     set by updatePlate(); Fraunces averages a bit over half an em per glyph,
+     so ~150cqw/len is the largest size that still fits the panel. */
+  font-size: min(clamp(32px, 9.5vw, 52px), calc(150cqw / var(--len, 7)));
 }
 
 /* Roles, not DOM order. Both panels stay put and the emphasis moves between
@@ -191,7 +201,11 @@ body {
   flex: 1 1 auto;
   opacity: .62;
 }
-.panel[data-role="ahead"] .name { font-size: clamp(22px, 6vw, 32px); }
+/* Capped smaller than the lit panel, and floored at 15px so a very long name
+   goes quiet rather than illegible. Past that, overflow-wrap breaks it. */
+.panel[data-role="ahead"] .name {
+  font-size: max(15px, min(32px, calc(150cqw / var(--len, 7))));
+}
 
 /* dead even: neither leads, so neither is lit brighter than the other */
 .panel[data-role="level"] {
@@ -201,7 +215,7 @@ body {
 }
 .panel[data-role="level"] .name {
   color: var(--who);
-  font-size: clamp(24px, 7vw, 34px);
+  font-size: min(clamp(24px, 7vw, 34px), calc(150cqw / var(--len, 7)));
 }
 
 /* empty state: an invitation, not a shrug. Same two panels, unlit and dashed,
@@ -211,7 +225,9 @@ body {
   border-style: dashed;
   min-height: clamp(120px, 24vw, 150px);
 }
-.panel[data-role="empty"] .name { font-size: clamp(24px, 7vw, 34px); }
+.panel[data-role="empty"] .name {
+  font-size: min(clamp(24px, 7vw, 34px), calc(150cqw / var(--len, 7)));
+}
 
 .verdict-note {
   margin: 0 0 44px;
