@@ -1,0 +1,76 @@
+:root {
+  --bg: #ffffff; --fg: #14181f; --muted: #5b6570; --line: #dfe3e8;
+  --card: #f6f8fa; --accent: #1a56db; --accent-fg: #fff;
+  --ok: #167c3d; --warn: #b45309; --danger: #b42318; --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#0f1419; --fg:#e6e9ee; --muted:#9aa4b0; --line:#252c36;
+    --card:#171d25; --accent:#4f83ff; --accent-fg:#0f1419;
+    --ok:#4ac07a; --warn:#e0a84a; --danger:#f2837a; }
+}
+* { box-sizing: border-box; }
+body { margin:0; font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  background:var(--bg); color:var(--fg); }
+.skip-link { position:absolute; left:-999px; }
+.skip-link:focus { left:8px; top:8px; background:var(--accent); color:var(--accent-fg);
+  padding:8px 12px; border-radius:6px; z-index:10; }
+#topbar { display:flex; align-items:center; gap:12px; padding:10px 16px;
+  border-bottom:1px solid var(--line); flex-wrap:wrap; }
+.brand { font-weight:700; }
+.spacer { flex:1; }
+#main { max-width:680px; margin:0 auto; padding:20px 16px 64px; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+  padding:16px; margin:12px 0; }
+h1,h2,h3 { line-height:1.25; }
+label { display:block; margin:10px 0 4px; font-weight:600; }
+input,select,textarea,button { font:inherit; }
+input,select,textarea { width:100%; padding:10px; border:1px solid var(--line);
+  border-radius:8px; background:var(--bg); color:var(--fg); }
+button { cursor:pointer; padding:10px 16px; border:1px solid var(--line);
+  border-radius:8px; background:var(--card); color:var(--fg); min-height:44px; }
+button.primary { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
+button.danger { color:var(--danger); border-color:var(--danger); background:transparent; }
+button.link { background:none; border:none; color:var(--muted); text-decoration:underline;
+  padding:4px 8px; min-height:auto; }
+button[disabled] { opacity:.55; cursor:default; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline:3px solid var(--accent); outline-offset:2px; }
+.error:empty { display:none; }
+.error { color:var(--danger); font-weight:600; }
+.muted { color:var(--muted); }
+.small { font-size:13px; }
+.row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+/* The verdict: the only thing on the page that gets to shout. */
+.verdict { text-align:center; padding:28px 16px; border-color:var(--accent); }
+.verdict .eyebrow { margin:0; text-transform:uppercase; letter-spacing:.08em;
+  font-size:12px; font-weight:700; color:var(--muted); }
+.verdict .headline { margin:6px 0 10px; font-size:34px; }
+.verdict.tilt-empty { border-color:var(--line); }
+.verdict.tilt-wide .headline { color:var(--danger); }
+.verdict.tilt-clear .headline { color:var(--warn); }
+.verdict.tilt-even .headline { color:var(--ok); }
+
+/* Four discrete steps — same coarse information as the word, no more. */
+.meter { display:flex; gap:6px; justify-content:center; margin-top:16px; }
+.meter span { width:38px; height:6px; border-radius:999px; background:var(--line); }
+.meter span.on { background:var(--accent); }
+.tilt-wide .meter span.on { background:var(--danger); }
+.tilt-clear .meter span.on { background:var(--warn); }
+.tilt-even .meter span.on { background:var(--ok); }
+
+ul.entries { list-style:none; padding:0; margin:0; }
+ul.entries li { display:flex; gap:12px; align-items:center; padding:10px 12px;
+  border:1px solid var(--line); border-radius:8px; margin:8px 0; background:var(--bg); }
+.entry-main { flex:1; display:flex; flex-direction:column; min-width:0; }
+.entry-main .note { font-weight:600; overflow-wrap:anywhere; }
+.hidden-amount { font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  color:var(--muted); letter-spacing:2px; cursor:help; }
+
+#toast { position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+  background:var(--fg); color:var(--bg); padding:10px 16px; border-radius:8px; z-index:20; }
+@media (max-width:560px){
+  #main{padding:12px;} .grid{grid-template-columns:1fr;}
+  .verdict .headline{font-size:27px;}
+}

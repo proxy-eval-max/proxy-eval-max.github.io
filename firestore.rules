@@ -1,0 +1,93 @@
+rules_version = '2';
+
+// Firestore security rules for the "proxy-eval" project.
+//
+// These, not the client code, are the security boundary. The JS in expenses/ and
+// moving-checklist/ is downloadable and editable by anyone; everything below runs
+// on Google's servers and cannot be bypassed.
+//
+// Deploy:  firebase deploy --only firestore:rules
+// Test:    Firebase console → Firestore → Rules → Playground
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- identity -----------------------------------------------------------
+    // Addresses are never written in plaintext, here or in the client. We hash the
+    // signed-in email with the same salt as expenses/js/hash.js and compare digests,
+    // so nothing crawlable in this repo reveals who the two accounts belong to.
+    // KEEP THIS SALT BYTE-IDENTICAL TO MEMBERS_SALT in expenses/js/hash.js.
+    function emailHash() {
+      return hashing.sha256('whose-turn/v1/' + request.auth.token.email.lower())
+        .toHexString().lower();
+    }
+
+    function isPartner() {
+      return request.auth != null
+        && request.auth.token.email is string
+        // Unverified emails are spoofable via some providers; require the real thing.
+        && request.auth.token.email_verified == true
+        && emailHash() in [
+          '2ebb87562543e2375120196201baf13f19c21fac65514361536454c78fe66996',
+          'dd2af658a76da97333aea44e68e7ba818eac89e2130406615d3e48417e9cd456'
+        ];
+    }
+
+    // ---- shared expense ledger ---------------------------------------------
+    match /ledgers/{ledgerId} {
+      allow read, write: if false; // the parent doc itself holds nothing
+
+      match /entries/{entryId} {
+        function validEntry() {
+          let d = request.resource.data;
+          return ledgerId == 'shared'
+            && d.keys().hasOnly(['payer', 'cents', 'note', 'at', 'by', 'createdAt'])
+            && d.keys().hasAll(['payer', 'cents', 'note', 'at', 'by', 'createdAt'])
+            && d.payer in ['anirudh', 'pallavi']
+            && d.cents is int && d.cents > 0 && d.cents <= 100000000
+            && d.note is string && d.note.size() <= 140
+            && d.at is string && d.at.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && d.by == request.auth.uid
+            // serverTimestamp() only — no client clocks, no backdating the audit trail.
+            && d.createdAt == request.time;
+        }
+
+        // Write throttle. The client commits the entry and its own meter document in
+        // one batch; this requires the meter to have landed in that same commit, and
+        // the meter rule below refuses to move more than once every two seconds. Net
+        // effect: at most one entry per person per 2s, enforced server-side, so a
+        // runaway script (or a stuck finger) cannot flood the collection.
+        function throttled() {
+          return getAfter(/databases/$(database)/documents/ledgers/$(ledgerId)/meters/$(request.auth.uid))
+            .data.last == request.time;
+        }
+
+        allow read: if isPartner();
+        allow create: if isPartner() && validEntry() && throttled();
+        allow update: if false; // entries are immutable — delete and re-add instead
+        allow delete: if isPartner();
+      }
+
+      match /meters/{uid} {
+        allow read: if isPartner();
+        allow create, update: if isPartner()
+          && uid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['last'])
+          && request.resource.data.last == request.time
+          && (resource == null
+              || request.time > resource.data.last + duration.value(2, 's'));
+        allow delete: if false;
+      }
+    }
+
+    // ---- moving-checklist: one private document per user --------------------
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Anything not matched above is denied.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
