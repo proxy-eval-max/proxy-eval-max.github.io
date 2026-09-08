@@ -15,6 +15,17 @@ const app = initializeApp(firebaseConfig);
 // the REST API. Without it the project's endpoints are open to anyone with the
 // (public) API key; with enforcement on in the console, they are not.
 export const appCheckEnabled = !!APP_CHECK_SITE_KEY;
+
+// On localhost there is no reCAPTCHA attestation to be had, so with enforcement
+// on the dev server would just fail every request. This asks the SDK to mint a
+// debug token and log it; it is useless until someone pastes that token into the
+// console's allowlist, and it never runs on the deployed origin.
+// Never commit a token itself — it is a bypass that works from anywhere.
+if (appCheckEnabled
+    && ["localhost", "127.0.0.1"].includes(location.hostname)) {
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+
 if (appCheckEnabled) {
   initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider(APP_CHECK_SITE_KEY),

@@ -153,10 +153,18 @@ the URL:
    a script that never loads this page. The app runs fine without it and says so in
    a footer note, which disappears once the key is set.
 
-   Once enforcement is on, local dev needs an App Check debug token. Generate it in
-   the browser and register it under App Check → *Manage debug tokens*. **Never
-   commit a debug token** — it is a deliberate bypass, and anyone who finds it can
-   mint valid tokens from anywhere.
+   Once enforcement is on, local dev needs an App Check debug token. `js/firebase.js`
+   asks for one automatically on `localhost`, and the SDK logs it to the browser
+   console on first load. In Safari the console is behind the Develop menu:
+   Safari → Settings → Advanced → *Show features for web developers*, then ⌥⌘C.
+   Copy the UUID out of the `App Check debug token:` line and add it under App Check
+   → your web app → ⋮ → *Manage debug tokens*.
+
+   The token is stored per browser profile, so clearing website data or using a
+   private window gets you a new one that isn't on the allowlist yet.
+
+   **Never commit a debug token** — it is a deliberate bypass, and anyone who finds
+   it can mint valid tokens from anywhere.
 2. **Restrict the API key.** Google Cloud console → APIs & Services → Credentials →
    the browser key → Application restrictions → HTTP referrers →
    `https://proxy-eval-max.github.io/*`.
