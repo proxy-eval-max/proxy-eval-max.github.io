@@ -30,4 +30,4 @@ export function isConfigured() {
 //
 // Leave empty to run without App Check: the app still works and shows a footer
 // note. See ../README.md → "Locking it down".
-export const APP_CHECK_SITE_KEY = "";
+export const APP_CHECK_SITE_KEY = "6LdtA7EtAAAAACwluRGpD-6tr53M-2E9G_zdzYfD";
