@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img"
+     aria-label="Whose Turn">
+  <!-- The turn plate, reduced to its one idea: two panels, unequal, one lit.
+       Same 66/34 split the "clear" tilt bucket uses, same two accent colours. -->
+  <rect width="512" height="512" rx="112" fill="#1a1226"/>
+  <rect x="72" y="136" width="240" height="240" rx="40"
+        fill="#241a33" stroke="#ffb35c" stroke-opacity=".85" stroke-width="4"/>
+  <rect x="72" y="136" width="240" height="240" rx="40" fill="#ffb35c" fill-opacity="0.15"/>
+  <rect x="332" y="176" width="108" height="200" rx="34"
+        fill="#241a33" stroke="#6fe3c4" stroke-opacity=".4" stroke-width="4"/>
+</svg>

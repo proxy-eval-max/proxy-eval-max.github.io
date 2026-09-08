@@ -5,7 +5,8 @@ import { isConfigured } from "./firebase-config.js";
 import { el, clear, qs } from "./ui.js";
 import { MEMBERS, memberByEmail } from "./members.js";
 import { nameOf, unsealNames, forgetNames } from "./names.js";
-import { verdict, activity, parseAmount, plateSplit, shortDate, todayIso } from "./ledger.js";
+import { verdict, activity, parseAmount, plateSplit, shortDate, todayIso, isoDay }
+  from "./ledger.js";
 
 const main = () => qs("#main");
 
@@ -46,6 +47,49 @@ function payerPicker(prefix, selected) {
   }
   return group;
 }
+// Almost everything is logged the day it happens or the morning after, so those
+// two get chips and the full picker hides behind "other date". The native input
+// is still the single source of truth — the chips just write to it — which keeps
+// `08/09/2026` in browser chrome, and its locale-dependent ordering, off the
+// page in the common case.
+function datePick(prefix, value) {
+  const input = el("input", { class: "input input-date", id: `${prefix}-when`,
+    type: "date", value, max: todayIso() });
+  const chips = el("div", { class: "chips" });
+  const wrap = el("div", { class: "datepick", role: "group",
+    "aria-labelledby": `${prefix}-when-label` }, [chips, input]);
+
+  const quick = [["today", isoDay(0)], ["yesterday", isoDay(-1)]];
+  const buttons = quick.map(([label, iso]) => {
+    const b = el("button", { class: "chip", type: "button", text: label,
+      "data-iso": iso });
+    b.onclick = () => set(iso, false);
+    return b;
+  });
+  // "other", not "other date": three chips only fit on one line in the narrow
+  // half of the field row if the third one is short.
+  const other = el("button", { class: "chip chip-other", type: "button",
+    text: "other", "aria-label": "Pick another date" });
+  other.onclick = () => { set(input.value, true); input.focus(); };
+  chips.append(...buttons, other);
+
+  function set(iso, showInput) {
+    if (iso) input.value = iso;
+    const matched = buttons.find(b => b.dataset.iso === input.value);
+    wrap.dataset.mode = showInput || !matched ? "other" : "quick";
+    for (const b of buttons) b.setAttribute("aria-pressed", String(b === matched));
+    other.setAttribute("aria-pressed", String(!matched));
+    // Bubbles to the form, so the edit draft picks a chip tap up like typing.
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+  input.addEventListener("change", () => set(null, true));
+  set(null, false);
+
+  wrap.reset = () => set(isoDay(0), false);
+  return wrap;
+}
+const pickedDate = (scope, prefix) => qs(`#${prefix}-when`, scope)?.value || "";
+
 const pickedPayer = (scope, prefix) =>
   qs(`input[name="${prefix}-payer"]:checked`, scope)?.value || null;
 
@@ -111,8 +155,7 @@ function addSection() {
   const note = el("input", { class: "input", id: "add-note", type: "text",
     autocomplete: "off", maxlength: String(db.MAX_NOTE),
     placeholder: "Thai place, cab home, weekly shop…" });
-  const when = el("input", { class: "input input-date", id: "add-when",
-    type: "date", value: todayIso(), max: todayIso() });
+  const when = datePick("add", todayIso());
   const submit = el("button", { class: "btn btn-primary", type: "submit", text: "Log it" });
 
   const form = el("form", { class: "section", novalidate: true }, [
@@ -126,7 +169,7 @@ function addSection() {
         amount,
         el("p", { class: "hint", text: "stored, never shown back" })]),
       el("div", {}, [
-        el("label", { class: "eyebrow", for: "add-when", text: "when" }), when]),
+        el("p", { class: "eyebrow", id: "add-when-label", text: "when" }), when]),
     ]),
     el("div", { class: "field" }, [
       el("label", { class: "eyebrow", for: "add-note", text: "what for" }), note]),
@@ -142,7 +185,7 @@ function addSection() {
     if (cents === null) {
       err.textContent = "Enter an amount greater than zero."; amount.focus(); return;
     }
-    const at = when.value || todayIso();
+    const at = pickedDate(form, "add") || todayIso();
     if (busy) return;
 
     busy = true; submit.disabled = true; submit.textContent = "Saving…";
@@ -150,7 +193,7 @@ function addSection() {
       await db.addEntry(dbDeps, { payer, cents, note: note.value, at,
         uid: auth.currentUser(authDeps).uid });
       // Wipe the amount at once — the number is the one thing this page forgets.
-      amount.value = ""; note.value = ""; when.value = todayIso();
+      amount.value = ""; note.value = ""; when.reset();
       toast(`Logged for ${nameOf(payer)}.`);
       amount.focus();
     } catch (e) {
@@ -376,8 +419,7 @@ function editRow(r) {
   const note = el("input", { class: "input", id: "edit-note", type: "text",
     autocomplete: "off", maxlength: String(db.MAX_NOTE), value: d.note,
     placeholder: "what was it for" });
-  const when = el("input", { class: "input input-date", id: "edit-when",
-    type: "date", value: d.at, max: todayIso() });
+  const when = datePick("edit", d.at);
 
   const save = el("button", { class: "btn btn-primary btn-sm", type: "submit",
     text: "Save changes" });
@@ -395,7 +437,7 @@ function editRow(r) {
         amount,
         el("p", { class: "hint", text: "blank keeps the current one" })]),
       el("div", {}, [
-        el("label", { class: "eyebrow", for: "edit-when", text: "when" }), when]),
+        el("p", { class: "eyebrow", id: "edit-when-label", text: "when" }), when]),
     ]),
     el("div", { class: "field" }, [
       el("label", { class: "eyebrow", for: "edit-note", text: "what for" }), note]),
@@ -405,14 +447,14 @@ function editRow(r) {
   // Keep what's typed if the other person's write lands mid-edit.
   form.addEventListener("input", () => {
     editDraft = { payer: pickedPayer(form, "edit") || d.payer, note: note.value,
-      at: when.value, amount: amount.value };
+      at: pickedDate(form, "edit"), amount: amount.value };
   });
 
   form.onsubmit = async (ev) => {
     ev.preventDefault();
     err.textContent = "";
     const payer = pickedPayer(form, "edit");
-    const at = when.value;
+    const at = pickedDate(form, "edit");
     if (!payer) { err.textContent = "Pick who paid."; return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(at)) { err.textContent = "Pick a valid date."; return; }
 
@@ -566,4 +608,12 @@ window.addEventListener("DOMContentLoaded", () => {
   }
   main().innerHTML = "<p class=\"eyebrow\">loading</p>";
   auth.onAuth(authDeps, onUser);
+  registerWorker();
 });
+
+// Add-to-home-screen and an offline shell. Failing to register is not worth
+// telling anyone about — the page is identical without it.
+function registerWorker() {
+  if (!("serviceWorker" in navigator) || location.protocol === "file:") return;
+  navigator.serviceWorker.register("./sw.js").catch(() => {});
+}

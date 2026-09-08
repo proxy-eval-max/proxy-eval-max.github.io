@@ -71,15 +71,24 @@ Items 1–3 are really one refactor and should land together.
   product, and right now it is indistinguishable from a re-render.
   Done: `.is-new` runs a slide-in plus a 1.5s accent flash, suppressed on the
   first paint so signing in doesn't set the whole list off.
-- [ ] **4. Replace the native date input.** `08/09/2026` in browser chrome is the
+- [x] **4. Replace the native date input.** `08/09/2026` in browser chrome is the
   one element that ignores the type system, and its format is locale-dependent so
   it reads ambiguously. Two chips — `today` / `yesterday` — cover almost all
   logging, with the full picker behind a quieter "other date" affordance.
-- [ ] **5. Make it installable.** No `manifest.json`, no icons, no favicon. For a
+  Done, on both the add and the edit form. The native input is still the single
+  source of truth and the chips write to it, so nothing downstream changed.
+  Found while building it: `todayIso()` was a UTC slice, which calls 1am in Delhi
+  "yesterday" — now a local-calendar `isoDay(offset)`, with a test.
+- [x] **5. Make it installable.** No `manifest.json`, no icons, no favicon. For a
   phone-first tool, add-to-home-screen with a standalone display mode and the
   `--void` theme colour is a large perceived-quality jump for very little code.
   Firestore offline persistence alongside it would let the page open and render
   the last known verdict with no signal.
+  Done: manifest, an icon that is the turn plate at 512px, safe-area insets for
+  standalone mode, `persistentLocalCache`, and a deliberately network-first
+  service worker — a cache-first shell on GitHub Pages is how a fix goes
+  undelivered for a week. The offline cache does put the amounts in IndexedDB;
+  that trade is written down in the README rather than left implicit.
 - [x] **6. Announce verdict changes to assistive tech.** The plate swaps silently;
   an `aria-live="polite"` region carrying `v.headline` makes the page's single
   output perceivable without sight. Related: after saving or cancelling an edit,

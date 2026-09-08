@@ -124,4 +124,13 @@ export function shortDate(iso) {
   return month ? `${m[3]} ${month}` : iso;
 }
 
-export function todayIso() { return new Date().toISOString().slice(0, 10); }
+// Local calendar day, not UTC. toISOString() would call one in the morning in
+// Delhi "yesterday", and the date on an entry is the date the person logging it
+// believes it is. `offsetDays` is how "yesterday" is expressed.
+const pad = (n) => String(n).padStart(2, "0");
+export function isoDay(offsetDays = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+export function todayIso() { return isoDay(0); }

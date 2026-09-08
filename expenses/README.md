@@ -37,6 +37,9 @@ contains no digits at all.
 
 ```
 index.html            shell
+manifest.json         add-to-home-screen metadata
+sw.js                 service worker — network-first, shell only
+icon.svg, icons/      the mark: the turn plate at 512px
 css/styles.css        styles
 js/ledger.js          who-pays-next logic — pure, no DOM, no Firebase
 js/members.js         the two accounts, as salted hashes and opaque ids
@@ -59,6 +62,17 @@ tests/                node --test, no browser needed
 To run it locally: `npm run serve`, then open http://localhost:8080/ . Sign-in needs
 `localhost` listed under Firebase console → Authentication → Settings → Authorized
 domains.
+
+## On a phone
+
+Add it to your home screen and it opens standalone, without browser chrome.
+Firestore keeps a local cache, so it opens and shows the last known verdict with
+no signal, and an entry logged offline syncs when you're back.
+
+That cache is the one place the amounts leave the server: they sit in this
+browser's IndexedDB. The promise this app makes is that the *interface* won't
+show you a number — not that the numbers never touch the device. Signing out
+stops the page reading them; it doesn't wipe the cache.
 
 ## Security
 

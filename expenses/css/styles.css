@@ -57,9 +57,11 @@ body {
 }
 
 /* ---- top bar --------------------------------------------------------------- */
+/* Installed to a home screen the page runs under the status bar and over the
+   home indicator, so both ends respect the safe area. */
 #topbar {
   display: flex; align-items: center; gap: 12px;
-  padding: 14px var(--gut);
+  padding: calc(14px + env(safe-area-inset-top)) var(--gut) 14px;
   border-bottom: 1px solid var(--haze);
 }
 #topbar[hidden] { display: none; }
@@ -74,8 +76,11 @@ body {
 #main {
   max-width: 620px;
   margin: 0 auto;
-  padding: clamp(28px, 7vw, 56px) var(--gut) 80px;
+  padding: clamp(28px, 7vw, 56px) var(--gut)
+           calc(80px + env(safe-area-inset-bottom));
 }
+/* Signed out there's no bar to hold the notch off the content. */
+#topbar[hidden] + #main { padding-top: calc(clamp(28px, 7vw, 56px) + env(safe-area-inset-top)); }
 
 /* ---- buttons --------------------------------------------------------------- */
 .btn {
@@ -248,6 +253,29 @@ body {
 .input-date { font-family: var(--mono); font-size: 15px; }
 /* Safari/Chrome date pickers render a near-black glyph on a dark field otherwise. */
 .input-date::-webkit-calendar-picker-indicator { filter: invert(.8); cursor: pointer; }
+
+/* date: two chips, and the native picker only when it's actually needed. Its
+   `08/09/2026` is the one control on the page that ignores the type system and
+   reads differently depending on the reader's locale. */
+.datepick[data-mode="quick"] .input-date { display: none; }
+.chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.datepick[data-mode="other"] .chips { margin-bottom: 9px; }
+.chip {
+  padding: 9px 13px; min-height: 40px;
+  font: 400 13px/1 var(--mono); letter-spacing: .04em;
+  color: var(--dim);
+  background: var(--shade);
+  border: 1px solid var(--haze); border-radius: 999px;
+  cursor: pointer;
+  transition: color .18s var(--ease), border-color .18s var(--ease),
+              background .18s var(--ease);
+}
+.chip:hover { border-color: var(--faint); color: var(--chalk); }
+.chip[aria-pressed="true"] {
+  color: var(--chalk);
+  border-color: color-mix(in srgb, var(--chalk) 45%, transparent);
+  background: var(--raise);
+}
 
 .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .hint { margin: 7px 0 0; font: 400 12px/1.4 var(--mono); color: var(--faint); }
@@ -431,7 +459,7 @@ body {
 
 /* ---- toast ----------------------------------------------------------------- */
 #toast {
-  position: fixed; left: 50%; bottom: 24px;
+  position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
   transform: translateX(-50%);
   padding: 12px 20px;
   background: var(--chalk); color: var(--void);

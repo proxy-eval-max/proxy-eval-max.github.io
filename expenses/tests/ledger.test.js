@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseAmount, totals, netBalance, verdict, activity, plateSplit, shortDate }
+import { parseAmount, totals, netBalance, verdict, activity, plateSplit, shortDate,
+  isoDay, todayIso }
   from "../js/ledger.js";
 import { __setNames } from "../js/names.js";
 
@@ -114,4 +115,20 @@ test("activity respects the limit and survives missing notes", () => {
   const rows = activity([e("p1", 1, { id: "x", at: "2026-01-01" })], 1);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].note, "");
+});
+
+// The date chips are only right if "today" means the local calendar day. An
+// ISO-string slice would call 1am in Delhi yesterday.
+test("isoDay is the local calendar day, and steps backwards", () => {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const local = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  assert.equal(isoDay(0), local);
+  assert.equal(todayIso(), local);
+
+  const then = new Date(now);
+  then.setDate(then.getDate() - 1);
+  assert.equal(isoDay(-1),
+    `${then.getFullYear()}-${pad(then.getMonth() + 1)}-${pad(then.getDate())}`);
+  assert.match(isoDay(-40), /^\d{4}-\d{2}-\d{2}$/);
 });
