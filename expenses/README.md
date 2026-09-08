@@ -41,7 +41,7 @@ js/hash.js            salted SHA-256, shared with tools/
 js/db.js              Firestore reads/writes + the write throttle
 js/auth.js            Google sign-in wrappers
 js/firebase.js        SDK wiring, App Check
-js/firebase-config.js re-exports the project config from ../moving-checklist
+js/firebase-config.js this app's Firebase web config + App Check site key
 js/app.js             views and boot
 tools/hash-email.js   generate a digest for members.js / firestore.rules
 tests/                node --test, no browser needed
@@ -92,12 +92,20 @@ re-add. Reads are capped at 500 documents per query.
 Two things are worth doing in the Firebase / Google Cloud console before you share
 the URL:
 
-1. **App Check.** Firebase console → App Check → register this web app with
-   reCAPTCHA v3, then put the site key in `APP_CHECK_SITE_KEY` in
-   `js/firebase-config.js` and turn on *enforcement* for Firestore. Without it, the
-   public API key can be driven by a script that never loads this page. The app runs
-   fine without App Check and says so in a footer note — that note disappears once
-   the key is set.
+1. **App Check.** Firebase console → App Check → register **this** web app
+   (`…web:12e055afca414f19585e85` — the project has two, don't register
+   moving-checklist's by mistake) with reCAPTCHA v3. Put the *site* key in
+   `APP_CHECK_SITE_KEY` in `js/firebase-config.js`; the *secret* key stays in the
+   console and never enters this repo. Then turn on *enforcement* for Firestore —
+   but only after the App Check dashboard shows your own traffic as verified, or
+   you'll lock yourself out. Without App Check, the public API key can be driven by
+   a script that never loads this page. The app runs fine without it and says so in
+   a footer note, which disappears once the key is set.
+
+   Once enforcement is on, local dev needs an App Check debug token. Generate it in
+   the browser and register it under App Check → *Manage debug tokens*. **Never
+   commit a debug token** — it is a deliberate bypass, and anyone who finds it can
+   mint valid tokens from anywhere.
 2. **Restrict the API key.** Google Cloud console → APIs & Services → Credentials →
    the browser key → Application restrictions → HTTP referrers →
    `https://proxy-eval-max.github.io/*`.

@@ -251,7 +251,7 @@ async function onUser(user) {
 window.addEventListener("DOMContentLoaded", () => {
   if (!isConfigured()) {
     main().innerHTML = "<h1>Setup needed</h1><p>Firebase is not configured. "
-      + "Set the project's web config in <code>moving-checklist/js/firebase-config.js</code>.</p>";
+      + "Set this app's web config in <code>expenses/js/firebase-config.js</code>.</p>";
     return;
   }
   main().innerHTML = "<h1>Whose Turn</h1><p class=\"muted\">Loading…</p>";
