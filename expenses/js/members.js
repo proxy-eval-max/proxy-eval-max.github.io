@@ -1,24 +1,26 @@
-// The only two people this tracker is for.
+// The only two people this tracker is for — as two opaque slots, `p1` and `p2`.
 //
-// Email addresses are not written down here — only salted SHA-256 hashes of them.
-// Be clear-eyed about what that buys: it keeps the addresses out of the page
-// source and out of git, so a scraper crawling the repo or the deployed JS finds
-// nothing to harvest. It is NOT secrecy. The salt ships with the client, so
-// anyone who already suspects an address can hash it and confirm the match. The
-// thing that actually keeps other people out is the Firestore rules
-// (firestore.rules at the repo root), which check the same hashes server-side.
+// Nothing identifying is written down here. No email addresses (only salted
+// SHA-256 digests of them) and no names: the display names are sealed in
+// data/names.enc.json and unlocked at sign-in, see names.js. The ids are
+// deliberately dull, because they end up in Firestore documents, in CSS
+// selectors and in the DOM, and every one of those is readable by anyone.
 //
-// To change or add an address, regenerate the digest with:
+// Be clear-eyed about what the digests buy: they keep addresses out of the page
+// source and out of git, so a scraper finds nothing to harvest. They are NOT
+// secrecy — the salt ships with the client, so anyone who already suspects an
+// address can hash it and confirm. The thing that actually keeps other people
+// out is firestore.rules, which checks the same digests server-side.
+//
+// To change an address, regenerate the digest with:
 //   node tools/hash-email.js <the-address>
-// and paste it into both this file and firestore.rules. tests/members.test.js fails
-// the build if a literal address ever lands back in the client source.
+// and paste it into both this file and firestore.rules. tests/members.test.js
+// fails if a literal address or a name ever lands back in the client source.
 import { MEMBERS_SALT, sha256Hex } from "./hash.js";
 
 export const MEMBERS = [
-  { id: "anirudh", name: "Anirudh",
-    emailHash: "2ebb87562543e2375120196201baf13f19c21fac65514361536454c78fe66996" },
-  { id: "pallavi", name: "Pallavi",
-    emailHash: "dd2af658a76da97333aea44e68e7ba818eac89e2130406615d3e48417e9cd456" },
+  { id: "p1", emailHash: "2ebb87562543e2375120196201baf13f19c21fac65514361536454c78fe66996" },
+  { id: "p2", emailHash: "dd2af658a76da97333aea44e68e7ba818eac89e2130406615d3e48417e9cd456" },
 ];
 
 export const MEMBER_IDS = MEMBERS.map(m => m.id);
@@ -49,5 +51,5 @@ function timingSafeEqualHex(a, b) {
 }
 
 export function memberById(id) { return MEMBERS.find(m => m.id === id) || null; }
-export function nameOf(id) { return memberById(id)?.name || id; }
+export function isMemberId(id) { return !!memberById(id); }
 export function otherThan(id) { return MEMBERS.find(m => m.id !== id)?.id || null; }

@@ -2,6 +2,12 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseAmount, totals, netBalance, verdict, activity, plateSplit, shortDate }
   from "../js/ledger.js";
+import { __setNames } from "../js/names.js";
+
+// Names are sealed on disk and unlocked at sign-in, so the ledger's name lookup
+// is a runtime store. Stand in for a successful unseal with fixtures — no real
+// name belongs in a test file any more than in the source.
+__setNames({ p1: "Ada", p2: "Grace" });
 
 const e = (payer, cents, extra = {}) => ({ payer, cents, ...extra });
 
@@ -19,40 +25,40 @@ test("parseAmount rejects junk, zero, and negatives", () => {
 });
 
 test("totals ignore unknown payers and bad amounts", () => {
-  const t = totals([e("anirudh", 1000), e("pallavi", 400), e("someone", 900), e("anirudh", -5)]);
-  assert.deepEqual(t, { anirudh: 1000, pallavi: 400 });
-  assert.equal(netBalance([e("anirudh", 1000), e("pallavi", 400)]), 600);
+  const t = totals([e("p1", 1000), e("p2", 400), e("stranger", 900), e("p1", -5)]);
+  assert.deepEqual(t, { p1: 1000, p2: 400 });
+  assert.equal(netBalance([e("p1", 1000), e("p2", 400)]), 600);
 });
 
 test("verdict names whoever has paid less", () => {
-  const v = verdict([e("anirudh", 5000), e("pallavi", 1000)]);
-  assert.equal(v.payer, "pallavi");
-  assert.equal(v.headline, "Pallavi pays next");
+  const v = verdict([e("p1", 5000), e("p2", 1000)]);
+  assert.equal(v.payer, "p2");
+  assert.equal(v.headline, "Grace pays next");
 
-  const w = verdict([e("pallavi", 5000), e("anirudh", 1000)]);
-  assert.equal(w.payer, "anirudh");
-  assert.equal(w.headline, "Anirudh pays next");
+  const w = verdict([e("p2", 5000), e("p1", 1000)]);
+  assert.equal(w.payer, "p1");
+  assert.equal(w.headline, "Ada pays next");
 });
 
 test("verdict handles the empty and dead-even cases", () => {
   assert.equal(verdict([]).tilt, "empty");
   assert.equal(verdict([]).payer, null);
-  const even = verdict([e("anirudh", 2500), e("pallavi", 2500)]);
+  const even = verdict([e("p1", 2500), e("p2", 2500)]);
   assert.equal(even.payer, null);
   assert.equal(even.tilt, "even");
 });
 
 test("tilt buckets widen as the gap grows", () => {
   // gap / total spend: 4%, 20%, 50%, 100%
-  assert.equal(verdict([e("anirudh", 5200), e("pallavi", 4800)]).tilt, "even");
-  assert.equal(verdict([e("anirudh", 6000), e("pallavi", 4000)]).tilt, "slight");
-  assert.equal(verdict([e("anirudh", 7500), e("pallavi", 2500)]).tilt, "clear");
-  assert.equal(verdict([e("anirudh", 9000)]).tilt, "wide");
+  assert.equal(verdict([e("p1", 5200), e("p2", 4800)]).tilt, "even");
+  assert.equal(verdict([e("p1", 6000), e("p2", 4000)]).tilt, "slight");
+  assert.equal(verdict([e("p1", 7500), e("p2", 2500)]).tilt, "clear");
+  assert.equal(verdict([e("p1", 9000)]).tilt, "wide");
 });
 
 // The entire premise of the page: it must never hand a number to the view layer.
 test("verdict leaks no amounts", () => {
-  const v = verdict([e("anirudh", 133742), e("pallavi", 999)]);
+  const v = verdict([e("p1", 133742), e("p2", 999)]);
   assert.deepEqual(Object.keys(v).sort(),
     ["ahead", "aheadName", "count", "detail", "headline", "payer", "payerName", "tilt"]);
   const text = `${v.headline} ${v.detail}`;
@@ -61,9 +67,9 @@ test("verdict leaks no amounts", () => {
 });
 
 test("verdict names both sides so the plate can label them", () => {
-  const v = verdict([e("anirudh", 9000), e("pallavi", 1000)]);
-  assert.equal(v.payerName, "Pallavi");
-  assert.equal(v.aheadName, "Anirudh");
+  const v = verdict([e("p1", 9000), e("p2", 1000)]);
+  assert.equal(v.payerName, "Grace");
+  assert.equal(v.aheadName, "Ada");
   assert.notEqual(v.payer, v.ahead);
 });
 
@@ -85,27 +91,27 @@ test("shortDate formats for the mono caption and passes junk through", () => {
 
 test("activity drops amounts and sorts newest first", () => {
   const rows = activity([
-    e("anirudh", 500, { id: "a", at: "2026-09-01", note: "Coffee" }),
-    e("pallavi", 900, { id: "b", at: "2026-09-05", note: "Groceries" }),
-    e("anirudh", 100, { id: "c", at: "2026-09-05", note: "Late one", createdMs: 99 }),
+    e("p1", 500, { id: "a", at: "2026-09-01", note: "Coffee" }),
+    e("p2", 900, { id: "b", at: "2026-09-05", note: "Groceries" }),
+    e("p1", 100, { id: "c", at: "2026-09-05", note: "Late one", createdMs: 99 }),
   ]);
   assert.deepEqual(rows.map(r => r.id), ["c", "b", "a"]);
-  assert.equal(rows[0].payerName, "Anirudh");
+  assert.equal(rows[0].payerName, "Ada");
   assert.equal(rows[0].note, "Late one");
   for (const r of rows) assert.equal("cents" in r, false);
 });
 
 test("activity flags edited entries", () => {
   const rows = activity([
-    e("anirudh", 500, { id: "a", at: "2026-09-01", editedAt: { seconds: 1 } }),
-    e("pallavi", 500, { id: "b", at: "2026-08-01" }),
+    e("p1", 500, { id: "a", at: "2026-09-01", editedAt: { seconds: 1 } }),
+    e("p2", 500, { id: "b", at: "2026-08-01" }),
   ]);
   assert.equal(rows.find(r => r.id === "a").edited, true);
   assert.equal(rows.find(r => r.id === "b").edited, false);
 });
 
 test("activity respects the limit and survives missing notes", () => {
-  const rows = activity([e("anirudh", 1, { id: "x", at: "2026-01-01" })], 1);
+  const rows = activity([e("p1", 1, { id: "x", at: "2026-01-01" })], 1);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].note, "");
 });

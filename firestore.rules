@@ -41,7 +41,7 @@ service cloud.firestore {
         // Value rules, shared by create and update.
         function validValues(d) {
           return ledgerId == 'shared'
-            && d.payer in ['anirudh', 'pallavi']
+            && d.payer in ['p1', 'p2']
             && d.cents is int && d.cents > 0 && d.cents <= 100000000
             && d.note is string && d.note.size() <= 140
             && d.at is string && d.at.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');

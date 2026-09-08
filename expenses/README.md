@@ -5,8 +5,11 @@ A two-person expense tracker that refuses to tell you the numbers.
 You log what each of you spent and what it was for. The page stores all of it —
 amount included — and then shows you exactly one thing:
 
-> **Pallavi pays next**
-> *Anirudh is a little ahead. Nothing dramatic, but the next one is Pallavi's.*
+> **Partner two pays next**
+> *Partner one is a little ahead. Nothing dramatic, but the next one is Partner two's.*
+
+(with real first names in place of those placeholders once the sealed name file
+is in place — see [Names](#names))
 
 No balance, no running total, no "you owe ₹1,240". The full record lives in
 Firestore if you ever need it (see [Getting the real numbers](#getting-the-real-numbers)),
@@ -36,14 +39,18 @@ contains no digits at all.
 index.html            shell
 css/styles.css        styles
 js/ledger.js          who-pays-next logic — pure, no DOM, no Firebase
-js/members.js         the two accounts, as salted hashes
+js/members.js         the two accounts, as salted hashes and opaque ids
+js/names.js           display names: unsealed at sign-in, never in the source
+js/secret.js          PBKDF2 + AES-GCM seal/unseal
 js/hash.js            salted SHA-256, shared with tools/
 js/db.js              Firestore reads/writes + the write throttle
 js/auth.js            Google sign-in wrappers
 js/firebase.js        SDK wiring, App Check
 js/firebase-config.js this app's Firebase web config + App Check site key
 js/app.js             views and boot
+data/names.enc.json   the two names, sealed (generated; safe to commit)
 tools/hash-email.js   generate a digest for members.js / firestore.rules
+tools/seal-names.js   (re)generate data/names.enc.json
 tests/                node --test, no browser needed
 ```
 
@@ -69,6 +76,36 @@ addresses away from repo crawlers and scrapers. Be honest about the limit: the s
 ships with the client, so anyone who already suspects an address can hash it and
 confirm a match. It's anti-harvesting, not secrecy.
 `tests/members.test.js` fails if a literal address ever creeps back into the source.
+
+## Names
+
+The two people's names are not in this repo either. The code knows them only as
+`p1` and `p2` — ids dull enough to sit safely in Firestore documents, CSS
+selectors and the DOM. The real names live in `data/names.enc.json` as two
+sealed copies of the same `{"p1":"…","p2":"…"}` payload, each encrypted under a
+key derived from one partner's email address (PBKDF2-SHA256, 250k iterations,
+then AES-256-GCM — the same envelope `moving-checklist/data/*.enc.json` uses).
+
+Sign in and the client tries your address against both records; the one that
+authenticates hands back both names for the session. They stay in memory, are
+dropped on sign-out, and never reach storage.
+
+Generate or change the file with:
+
+```sh
+node tools/seal-names.js
+```
+
+It prompts, so the names and addresses never touch your shell history or a diff.
+Until the file exists the page renders "Partner one" / "Partner two" and works
+normally.
+
+What this does and doesn't buy you: the key is an email address, and no address
+appears anywhere in the repo, so a crawler or a casual reader of the source gets
+nothing. But an address is guessable in a way a random key is not, and the
+salted digests in `members.js` let a determined reader test a guess cheaply. This
+is protection against harvesting and idle curiosity — not against someone who
+already knows your address.
 
 **Nobody else can read or write.** The rules require a signed-in user with a
 *verified* email whose digest is on the two-entry allowlist. A stranger who signs in

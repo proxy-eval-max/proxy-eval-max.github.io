@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { MEMBERS, MEMBER_IDS, memberByEmail, nameOf, otherThan } from "../js/members.js";
+import { MEMBERS, MEMBER_IDS, memberByEmail, isMemberId, otherThan } from "../js/members.js";
 import { MEMBERS_SALT, sha256Hex } from "../js/hash.js";
 
 test("sha256Hex matches a known vector", async () => {
@@ -21,13 +21,16 @@ test("no plaintext email addresses anywhere in the client source", async () => {
   }
 });
 
-test("members are stored as 64-char hex digests, not addresses", () => {
+test("members carry a digest and nothing identifying", () => {
   assert.equal(MEMBERS.length, 2);
   for (const m of MEMBERS) {
     assert.match(m.emailHash, /^[0-9a-f]{64}$/);
     assert.equal("email" in m, false);
+    // No display name here either: names are sealed in data/names.enc.json.
+    assert.equal("name" in m, false);
   }
-  assert.deepEqual(MEMBER_IDS, ["anirudh", "pallavi"]);
+  // Opaque ids, because they end up in Firestore docs, CSS selectors and the DOM.
+  assert.deepEqual(MEMBER_IDS, ["p1", "p2"]);
 });
 
 test("an unknown address matches nobody", async () => {
@@ -45,10 +48,9 @@ test("lookup is case- and whitespace-insensitive", async () => {
   assert.equal(await sha256Hex(MEMBERS_SALT + norm), fake[0].emailHash);
 });
 
-test("name and partner helpers", () => {
-  assert.equal(nameOf("anirudh"), "Anirudh");
-  assert.equal(nameOf("pallavi"), "Pallavi");
-  assert.equal(nameOf("nobody"), "nobody");
-  assert.equal(otherThan("anirudh"), "pallavi");
-  assert.equal(otherThan("pallavi"), "anirudh");
+test("membership and partner helpers", () => {
+  assert.equal(isMemberId("p1"), true);
+  assert.equal(isMemberId("nobody"), false);
+  assert.equal(otherThan("p1"), "p2");
+  assert.equal(otherThan("p2"), "p1");
 });

@@ -3,7 +3,8 @@ import * as db from "./db.js";
 import { authDeps, dbDeps, appCheckEnabled } from "./firebase.js";
 import { isConfigured } from "./firebase-config.js";
 import { el, clear, qs } from "./ui.js";
-import { MEMBERS, memberByEmail, nameOf } from "./members.js";
+import { MEMBERS, memberByEmail } from "./members.js";
+import { nameOf, unsealNames, forgetNames } from "./names.js";
 import { verdict, activity, parseAmount, plateSplit, shortDate, todayIso } from "./ledger.js";
 
 const main = () => qs("#main");
@@ -33,7 +34,7 @@ function payerPicker(prefix, selected) {
     group.append(
       el("input", { type: "radio", id, name: `${prefix}-payer`, value: m.id,
         checked: m.id === selected }),
-      el("label", { for: id, text: m.name }),
+      el("label", { for: id, text: nameOf(m.id) }),
     );
   }
   return group;
@@ -340,7 +341,7 @@ function mountDenied() {
 
 function mount() {
   qs("#topbar").hidden = false;
-  qs("#who").textContent = me.name.toLowerCase();
+  qs("#who").textContent = nameOf(me.id).toLowerCase();
   qs("#logout-btn").onclick = () => auth.logout(authDeps);
 
   const root = main(); clear(root);
@@ -364,6 +365,7 @@ function refresh() {
 function teardown() {
   if (unsub) { unsub(); unsub = null; }
   entries = []; me = null; editingId = null; editDraft = null;
+  forgetNames(); // signing out should also drop the names from memory
 }
 
 async function onUser(user) {
@@ -376,6 +378,10 @@ async function onUser(user) {
   if (!me) { mountDenied(); return; }
 
   main().innerHTML = "<p class=\"eyebrow\">loading</p>";
+  // Unlock the display names with the signed-in address. If the sealed file is
+  // missing or won't open, nameOf() keeps returning placeholders and the page
+  // works anyway — this is personalisation, not a second gate.
+  await unsealNames(user.email);
   let mounted = false;
   unsub = db.subscribe(dbDeps,
     docs => {

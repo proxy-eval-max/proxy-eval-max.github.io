@@ -35,7 +35,7 @@ function fakeDeps({ failCommit = null } = {}) {
   return deps;
 }
 
-const entry = { payer: "anirudh", cents: 4250, note: "Thai place", at: "2026-09-08", uid: "u1" };
+const entry = { payer: "p1", cents: 4250, note: "Thai place", at: "2026-09-08", uid: "u1" };
 
 test("addEntry writes the full record — amount included — to the backend", async () => {
   db.__resetThrottle();
@@ -46,7 +46,7 @@ test("addEntry writes the full record — amount included — to the backend", a
   const written = ops.find(o => o.ref.path.includes("entries")).data;
   assert.equal(written.cents, 4250);
   assert.equal(written.note, "Thai place");
-  assert.equal(written.payer, "anirudh");
+  assert.equal(written.payer, "p1");
   assert.equal(written.at, "2026-09-08");
   assert.equal(written.by, "u1");
   assert.equal(written.createdAt, "SERVER_TIME");
@@ -104,7 +104,7 @@ test("notes are collapsed and clipped to the length the rules allow", () => {
   assert.equal(db.sanitizeNote(undefined), "");
 });
 
-const edit = { payer: "pallavi", note: "Thai place, split", at: "2026-09-07", uid: "u2" };
+const edit = { payer: "p2", note: "Thai place, split", at: "2026-09-07", uid: "u2" };
 const patchOf = deps => deps.commits[0].find(o => o.op === "update").data;
 
 test("updateEntry leaves the amount alone when none is given", async () => {
@@ -114,7 +114,7 @@ test("updateEntry leaves the amount alone when none is given", async () => {
 
   const patch = patchOf(deps);
   assert.equal("cents" in patch, false, "a blank amount must not overwrite the stored one");
-  assert.equal(patch.payer, "pallavi");
+  assert.equal(patch.payer, "p2");
   assert.equal(patch.note, "Thai place, split");
   assert.equal(patch.at, "2026-09-07");
 });
@@ -179,8 +179,8 @@ test("subscribe orders newest-first, caps the read, and returns a teardown", () 
   const seen = [];
   const unsub = db.subscribe(deps, docs => seen.push(docs), () => {});
   assert.deepEqual(deps._sub.q.mods, [["orderBy", "at", "desc"], ["limit", db.PAGE_LIMIT]]);
-  deps._sub.onData({ docs: [{ id: "a", data: () => ({ payer: "pallavi", cents: 1 }) }] });
-  assert.deepEqual(seen, [[{ id: "a", payer: "pallavi", cents: 1 }]]);
+  deps._sub.onData({ docs: [{ id: "a", data: () => ({ payer: "p2", cents: 1 }) }] });
+  assert.deepEqual(seen, [[{ id: "a", payer: "p2", cents: 1 }]]);
   unsub();
   assert.equal(deps._unsubbed, true);
 });

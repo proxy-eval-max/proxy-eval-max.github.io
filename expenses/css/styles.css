@@ -13,8 +13,10 @@
   --dim:   #a294b5;
   --faint: #6f6383;
   /* people */
-  --anirudh: #ffb35c;
-  --pallavi: #6fe3c4;
+  /* One accent per person, keyed to the opaque member ids (see js/members.js) —
+     the names themselves are sealed and never reach the stylesheet. */
+  --who-1: #ffb35c;
+  --who-2: #6fe3c4;
   --alert:   #ff9a8f;
 
   --display: "Fraunces", Georgia, serif;
@@ -139,8 +141,8 @@ body {
   transition: flex-basis .55s var(--ease), background .4s var(--ease),
               border-color .4s var(--ease), opacity .4s var(--ease);
 }
-.panel[data-who="anirudh"] { --who: var(--anirudh); }
-.panel[data-who="pallavi"] { --who: var(--pallavi); }
+.panel[data-who="p1"] { --who: var(--who-1); }
+.panel[data-who="p2"] { --who: var(--who-2); }
 
 .panel .name {
   margin: 18px 0 0;
@@ -247,8 +249,8 @@ body {
   cursor: pointer;
   transition: all .18s var(--ease);
 }
-.picker label[for$="anirudh"] { --who: var(--anirudh); }
-.picker label[for$="pallavi"] { --who: var(--pallavi); }
+.picker label[for$="p1"] { --who: var(--who-1); }
+.picker label[for$="p2"] { --who: var(--who-2); }
 .picker label::before {
   content: ""; width: 9px; height: 9px; border-radius: 50%;
   background: var(--who); opacity: .35; transition: opacity .18s var(--ease);
@@ -288,8 +290,8 @@ body {
   border-radius: 4px 10px 10px 4px;
   transition: background .16s var(--ease), border-color .16s var(--ease);
 }
-.entry[data-who="anirudh"] { --who: var(--anirudh); }
-.entry[data-who="pallavi"] { --who: var(--pallavi); }
+.entry[data-who="p1"] { --who: var(--who-1); }
+.entry[data-who="p2"] { --who: var(--who-2); }
 .entry:hover { background: var(--raise); }
 
 .entry-body { flex: 1; min-width: 0; }
@@ -299,7 +301,7 @@ body {
   overflow-wrap: anywhere;
 }
 .entry-note-empty { color: var(--faint); font-style: italic; font-weight: 400; }
-/* One line, always. Squeezed narrow, "pallavi · 08 sep" would break mid-date and
+/* One line, always. Squeezed narrow, "someone · 08 sep" would break mid-date and
    read like two facts instead of one, so it clips instead of wrapping. */
 .entry-meta {
   display: block; margin-top: 3px;

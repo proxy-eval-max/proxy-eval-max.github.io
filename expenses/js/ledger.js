@@ -5,7 +5,8 @@
 // the UI is allowed to call is `verdict()`, and `verdict()` returns nothing but
 // names and qualitative words. `totals()` / `netBalance()` exist for the maths
 // and the tests; keep them out of the views.
-import { MEMBER_IDS, nameOf, otherThan } from "./members.js";
+import { MEMBER_IDS, isMemberId, otherThan } from "./members.js";
+import { nameOf } from "./names.js";
 
 const MAX_AMOUNT = 1_000_000_000;
 
@@ -102,6 +103,9 @@ export function verdict(entries = []) {
 // fall back to when they were logged.
 export function activity(entries = [], limit = 20) {
   return [...entries]
+    // Drop anything logged against an id we don't know: a stale document
+    // shouldn't get to print its own payer string onto the page.
+    .filter(e => e && isMemberId(e.payer))
     .sort((a, b) => String(b.at || "").localeCompare(String(a.at || ""))
       || (b.createdMs || 0) - (a.createdMs || 0))
     .slice(0, limit)
