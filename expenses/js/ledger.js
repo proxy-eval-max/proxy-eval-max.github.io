@@ -48,31 +48,40 @@ const TILTS = [
 ];
 
 const DETAIL = {
-  even: (behind, ahead) => `You two are running about level — ${behind} is a hair behind ${ahead}, so it's their shout.`,
+  even: (behind, ahead) => `You're running about level. ${behind} is a hair behind ${ahead}, so it's their shout.`,
   slight: (behind, ahead) => `${ahead} is a little ahead. Nothing dramatic, but the next one is ${behind}'s.`,
-  clear: (behind, ahead) => `${ahead} has been carrying noticeably more lately. ${behind} should pick up the next few.`,
+  clear: (behind, ahead) => `${ahead} has been carrying noticeably more. ${behind} should pick up the next few.`,
   wide: (behind, ahead) => `${ahead} is well out in front. ${behind} has some catching up to do.`,
 };
 
+// How wide the "pays next" panel sits on the turn plate, as a percentage. These are
+// the same four buckets as `tilt`, drawn instead of named — a reader learns nothing
+// from the width that the word didn't already tell them.
+const SPLIT = { even: 50, slight: 58, clear: 66, wide: 74 };
+export function plateSplit(tilt) { return SPLIT[tilt] ?? 50; }
+
 /**
  * The only thing the UI shows. Returns names and adjectives — never a number.
- * @returns {{payer: string|null, payerName: string|null, tilt: string,
- *            headline: string, detail: string, count: number}}
+ * @returns {{payer: string|null, payerName: string|null, ahead: string|null,
+ *            aheadName: string|null, tilt: string, headline: string,
+ *            detail: string, count: number}}
  */
 export function verdict(entries = []) {
   const list = Array.isArray(entries) ? entries : [];
   const count = list.length;
+  const nobody = { payer: null, payerName: null, ahead: null, aheadName: null, count };
+
   if (!count) {
-    return { payer: null, payerName: null, tilt: "empty", count,
+    return { ...nobody, tilt: "empty",
       headline: "Nothing logged yet",
-      detail: "Add what each of you has spent and this will start calling it." };
+      detail: "Add the first expense and this starts calling it." };
   }
 
   const net = netBalance(list);
   if (net === 0) {
-    return { payer: null, payerName: null, tilt: "even", count,
+    return { ...nobody, tilt: "even",
       headline: "Dead even",
-      detail: "Neither of you owes the other a thing. Whoever's closest to the card." };
+      detail: "Neither of you is owed a thing. Whoever's closest to the card." };
   }
 
   const payer = net > 0 ? MEMBER_IDS[1] : MEMBER_IDS[0];
@@ -82,7 +91,8 @@ export function verdict(entries = []) {
   const share = spent ? Math.abs(net) / spent : 0;
   const tilt = TILTS.find(b => share < b.upTo).tilt;
 
-  return { payer, payerName: nameOf(payer), tilt, count,
+  return { payer, payerName: nameOf(payer), ahead, aheadName: nameOf(ahead),
+    tilt, count,
     headline: `${nameOf(payer)} pays next`,
     detail: DETAIL[tilt](nameOf(payer), nameOf(ahead)) };
 }
@@ -96,7 +106,18 @@ export function activity(entries = [], limit = 20) {
       || (b.createdMs || 0) - (a.createdMs || 0))
     .slice(0, limit)
     .map(e => ({ id: e.id, payer: e.payer, payerName: nameOf(e.payer),
-      note: e.note || "", at: e.at || "" }));
+      note: e.note || "", at: e.at || "", edited: !!e.editedAt }));
+}
+
+// "2026-09-08" → "08 sep". Short enough for a mono caption, unambiguous enough to
+// scan. Anything unparseable passes through untouched rather than showing NaN.
+const MONTHS = ["jan", "feb", "mar", "apr", "may", "jun",
+  "jul", "aug", "sep", "oct", "nov", "dec"];
+export function shortDate(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ""));
+  if (!m) return String(iso || "");
+  const month = MONTHS[Number(m[2]) - 1];
+  return month ? `${m[3]} ${month}` : iso;
 }
 
 export function todayIso() { return new Date().toISOString().slice(0, 10); }

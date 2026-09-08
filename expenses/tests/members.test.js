@@ -15,7 +15,8 @@ test("no plaintext email addresses anywhere in the client source", async () => {
     "js/auth.js", "js/firebase.js", "js/firebase-config.js", "index.html"];
   for (const f of files) {
     const src = await readFile(new URL(`../${f}`, import.meta.url), "utf8");
-    const hits = src.match(/[\w.+-]+@[\w-]+\.[\w.]+/g) || [];
+    // Letter TLD required, or the Google Fonts axis syntax ("wght@9..144") trips it.
+    const hits = src.match(/[\w.+-]+@[\w-]+\.[a-z]{2,}\b/gi) || [];
     assert.deepEqual(hits, [], `${f} contains an email-looking string: ${hits}`);
   }
 });

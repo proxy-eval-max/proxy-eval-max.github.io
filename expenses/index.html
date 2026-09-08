@@ -3,16 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Whose Turn — Anirudh &amp; Pallavi</title>
+  <title>Whose Turn</title>
+  <meta name="description" content="A two-person expense tracker that tells you who pays next, and nothing else." />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#1a1226" />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400..800&family=Instrument+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" />
   <link rel="stylesheet" href="./css/styles.css" />
 </head>
 <body>
   <a class="skip-link" href="#main">Skip to content</a>
   <header id="topbar" hidden>
-    <span class="brand">Whose Turn</span>
+    <span class="brand">whose&nbsp;turn</span>
     <span class="spacer"></span>
-    <span id="who" class="muted"></span>
-    <button id="logout-btn" type="button">Log out</button>
+    <span id="who"></span>
+    <button id="logout-btn" class="btn btn-ghost btn-sm" type="button">Log out</button>
   </header>
   <main id="main" tabindex="-1"></main>
   <div id="toast" role="status" aria-live="polite" hidden></div>

@@ -23,22 +23,17 @@ export function sanitizeNote(note) {
 }
 
 /**
- * Append one expense. The entry and the caller's throttle meter go up in a single
- * batch: the rules refuse the entry unless the meter lands with it, and refuse the
- * meter if it moved less than THROTTLE_MS ago. One committed write per user per
- * two seconds, enforced server-side.
+ * Commit a write together with the caller's throttle meter, in one batch. The rules
+ * refuse the entry unless the meter lands in the same commit, and refuse the meter
+ * if it moved less than THROTTLE_MS ago. One committed write per user per two
+ * seconds, enforced server-side rather than trusted to the browser.
  */
-export async function addEntry(deps, { payer, cents, note, at, uid }) {
+async function commitWithMeter(deps, uid, apply) {
   if (!uid) throw new Error("no-session");
-  if (!payer || !Number.isInteger(cents) || cents <= 0) throw new Error("bad-entry");
   if (Date.now() - lastWriteAt < THROTTLE_MS) throw new Error("too-fast");
 
   const batch = deps.writeBatch(deps.db);
-  const ref = deps.doc(deps.collection(deps.db, ...entriesPath()));
-  batch.set(ref, {
-    payer, cents, note: sanitizeNote(note), at,
-    by: uid, createdAt: deps.serverTimestamp(),
-  });
+  const result = apply(batch);
   batch.set(meterRef(deps, uid), { last: deps.serverTimestamp() });
 
   try {
@@ -48,7 +43,48 @@ export async function addEntry(deps, { payer, cents, note, at, uid }) {
     throw new Error("save-failed");
   }
   lastWriteAt = Date.now();
-  return ref.id;
+  return result;
+}
+
+// async so that validation failures arrive as rejections like everything else —
+// a promise-returning function that sometimes throws synchronously is a trap.
+export async function addEntry(deps, { payer, cents, note, at, uid }) {
+  if (!payer || !Number.isInteger(cents) || cents <= 0) throw new Error("bad-entry");
+  return commitWithMeter(deps, uid, batch => {
+    const ref = deps.doc(deps.collection(deps.db, ...entriesPath()));
+    batch.set(ref, {
+      payer, cents, note: sanitizeNote(note), at,
+      by: uid, createdAt: deps.serverTimestamp(),
+    });
+    return ref.id;
+  });
+}
+
+/**
+ * Correct an existing entry. Either partner may fix either partner's entry.
+ *
+ * `cents` is optional: leave it out and the stored amount is untouched. That is the
+ * whole reason edit works at all without breaking the premise — the edit form can
+ * offer you a blank amount field rather than prefilling the old number on screen.
+ *
+ * `by` and `createdAt` are never sent, so the rules' pin-to-previous check passes
+ * and an edit can't rewrite who logged it or when.
+ */
+export async function updateEntry(deps, id, { payer, cents, note, at, uid }) {
+  if (!id) throw new Error("bad-entry");
+  if (!payer || !at) throw new Error("bad-entry");
+  if (cents !== undefined && (!Number.isInteger(cents) || cents <= 0))
+    throw new Error("bad-entry");
+
+  return commitWithMeter(deps, uid, batch => {
+    const patch = {
+      payer, note: sanitizeNote(note), at,
+      editedAt: deps.serverTimestamp(), editedBy: uid,
+    };
+    if (cents !== undefined) patch.cents = cents;
+    batch.update(deps.doc(deps.db, ...entriesPath(), id), patch);
+    return id;
+  });
 }
 
 export async function deleteEntry(deps, id) {

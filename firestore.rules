@@ -38,18 +38,41 @@ service cloud.firestore {
       allow read, write: if false; // the parent doc itself holds nothing
 
       match /entries/{entryId} {
-        function validEntry() {
-          let d = request.resource.data;
+        // Value rules, shared by create and update.
+        function validValues(d) {
           return ledgerId == 'shared'
-            && d.keys().hasOnly(['payer', 'cents', 'note', 'at', 'by', 'createdAt'])
-            && d.keys().hasAll(['payer', 'cents', 'note', 'at', 'by', 'createdAt'])
             && d.payer in ['anirudh', 'pallavi']
             && d.cents is int && d.cents > 0 && d.cents <= 100000000
             && d.note is string && d.note.size() <= 140
-            && d.at is string && d.at.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+            && d.at is string && d.at.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+        }
+
+        function validCreate() {
+          let d = request.resource.data;
+          return d.keys().hasOnly(['payer', 'cents', 'note', 'at', 'by', 'createdAt'])
+            && d.keys().hasAll(['payer', 'cents', 'note', 'at', 'by', 'createdAt'])
+            && validValues(d)
             && d.by == request.auth.uid
             // serverTimestamp() only — no client clocks, no backdating the audit trail.
             && d.createdAt == request.time;
+        }
+
+        // Either partner may correct either partner's entry — a mistyped amount is
+        // a shared problem. What an edit may NOT do is rewrite history: the original
+        // author and creation time are pinned to their existing values, and the edit
+        // stamps who touched it and when, on the server clock.
+        function validUpdate() {
+          let d = request.resource.data;
+          let prev = resource.data;
+          return d.keys().hasOnly(['payer', 'cents', 'note', 'at', 'by', 'createdAt',
+              'editedAt', 'editedBy'])
+            && d.keys().hasAll(['payer', 'cents', 'note', 'at', 'by', 'createdAt',
+              'editedAt', 'editedBy'])
+            && validValues(d)
+            && d.by == prev.by
+            && d.createdAt == prev.createdAt
+            && d.editedAt == request.time
+            && d.editedBy == request.auth.uid;
         }
 
         // Write throttle. The client commits the entry and its own meter document in
@@ -63,8 +86,10 @@ service cloud.firestore {
         }
 
         allow read: if isPartner();
-        allow create: if isPartner() && validEntry() && throttled();
-        allow update: if false; // entries are immutable — delete and re-add instead
+        allow create: if isPartner() && validCreate() && throttled();
+        // Updates are throttled exactly like creates — otherwise a script could
+        // hammer one document forever and walk straight through the rate limit.
+        allow update: if isPartner() && validUpdate() && throttled();
         allow delete: if isPartner();
       }
 

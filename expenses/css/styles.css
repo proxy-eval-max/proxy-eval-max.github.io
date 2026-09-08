@@ -1,76 +1,396 @@
+/* Whose Turn — dusk palette, ledger vernacular, numbers deliberately absent.
+   Each partner owns a colour; that coding is the page's main structural device,
+   reused on the turn plate, the payer picker, and every history row. */
+
 :root {
-  --bg: #ffffff; --fg: #14181f; --muted: #5b6570; --line: #dfe3e8;
-  --card: #f6f8fa; --accent: #1a56db; --accent-fg: #fff;
-  --ok: #167c3d; --warn: #b45309; --danger: #b42318; --radius: 10px;
+  /* ground */
+  --void:  #1a1226;
+  --shade: #241a33;
+  --raise: #2e2240;
+  --haze:  #3d2f52;
+  /* ink */
+  --chalk: #f2ecf7;
+  --dim:   #a294b5;
+  --faint: #6f6383;
+  /* people */
+  --anirudh: #ffb35c;
+  --pallavi: #6fe3c4;
+  --alert:   #ff9a8f;
+
+  --display: "Fraunces", Georgia, serif;
+  --body: "Instrument Sans", system-ui, -apple-system, sans-serif;
+  --mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --r: 14px;
+  --gut: clamp(16px, 5vw, 28px);
+  --ease: cubic-bezier(.22, .8, .28, 1);
 }
-@media (prefers-color-scheme: dark) {
-  :root { --bg:#0f1419; --fg:#e6e9ee; --muted:#9aa4b0; --line:#252c36;
-    --card:#171d25; --accent:#4f83ff; --accent-fg:#0f1419;
-    --ok:#4ac07a; --warn:#e0a84a; --danger:#f2837a; }
-}
+
 * { box-sizing: border-box; }
-body { margin:0; font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
-  background:var(--bg); color:var(--fg); }
-.skip-link { position:absolute; left:-999px; }
-.skip-link:focus { left:8px; top:8px; background:var(--accent); color:var(--accent-fg);
-  padding:8px 12px; border-radius:6px; z-index:10; }
-#topbar { display:flex; align-items:center; gap:12px; padding:10px 16px;
-  border-bottom:1px solid var(--line); flex-wrap:wrap; }
-.brand { font-weight:700; }
-.spacer { flex:1; }
-#main { max-width:680px; margin:0 auto; padding:20px 16px 64px; }
-.card { background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
-  padding:16px; margin:12px 0; }
-h1,h2,h3 { line-height:1.25; }
-label { display:block; margin:10px 0 4px; font-weight:600; }
-input,select,textarea,button { font:inherit; }
-input,select,textarea { width:100%; padding:10px; border:1px solid var(--line);
-  border-radius:8px; background:var(--bg); color:var(--fg); }
-button { cursor:pointer; padding:10px 16px; border:1px solid var(--line);
-  border-radius:8px; background:var(--card); color:var(--fg); min-height:44px; }
-button.primary { background:var(--accent); color:var(--accent-fg); border-color:var(--accent); }
-button.danger { color:var(--danger); border-color:var(--danger); background:transparent; }
-button.link { background:none; border:none; color:var(--muted); text-decoration:underline;
-  padding:4px 8px; min-height:auto; }
-button[disabled] { opacity:.55; cursor:default; }
-button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
-  outline:3px solid var(--accent); outline-offset:2px; }
-.error:empty { display:none; }
-.error { color:var(--danger); font-weight:600; }
-.muted { color:var(--muted); }
-.small { font-size:13px; }
-.row { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-.grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
 
-/* The verdict: the only thing on the page that gets to shout. */
-.verdict { text-align:center; padding:28px 16px; border-color:var(--accent); }
-.verdict .eyebrow { margin:0; text-transform:uppercase; letter-spacing:.08em;
-  font-size:12px; font-weight:700; color:var(--muted); }
-.verdict .headline { margin:6px 0 10px; font-size:34px; }
-.verdict.tilt-empty { border-color:var(--line); }
-.verdict.tilt-wide .headline { color:var(--danger); }
-.verdict.tilt-clear .headline { color:var(--warn); }
-.verdict.tilt-even .headline { color:var(--ok); }
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--chalk);
+  font: 400 16px/1.55 var(--body);
+  -webkit-font-smoothing: antialiased;
+  /* A single soft bloom behind the plate — the only ambient effect on the page. */
+  background-image: radial-gradient(80vw 60vh at 50% -10%, #2b1f3f 0%, transparent 70%);
+  background-repeat: no-repeat;
+}
 
-/* Four discrete steps — same coarse information as the word, no more. */
-.meter { display:flex; gap:6px; justify-content:center; margin-top:16px; }
-.meter span { width:38px; height:6px; border-radius:999px; background:var(--line); }
-.meter span.on { background:var(--accent); }
-.tilt-wide .meter span.on { background:var(--danger); }
-.tilt-clear .meter span.on { background:var(--warn); }
-.tilt-even .meter span.on { background:var(--ok); }
+.skip-link { position: absolute; left: -999px; }
+.skip-link:focus {
+  left: 12px; top: 12px; z-index: 30; padding: 10px 14px;
+  background: var(--chalk); color: var(--void); border-radius: 8px;
+}
 
-ul.entries { list-style:none; padding:0; margin:0; }
-ul.entries li { display:flex; gap:12px; align-items:center; padding:10px 12px;
-  border:1px solid var(--line); border-radius:8px; margin:8px 0; background:var(--bg); }
-.entry-main { flex:1; display:flex; flex-direction:column; min-width:0; }
-.entry-main .note { font-weight:600; overflow-wrap:anywhere; }
-.hidden-amount { font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-  color:var(--muted); letter-spacing:2px; cursor:help; }
+/* ---- eyebrow: the mono utility voice, used for every label on the page ---- */
+.eyebrow {
+  margin: 0;
+  font: 500 11px/1 var(--mono);
+  letter-spacing: .16em;
+  text-transform: lowercase;
+  color: var(--faint);
+}
 
-#toast { position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
-  background:var(--fg); color:var(--bg); padding:10px 16px; border-radius:8px; z-index:20; }
-@media (max-width:560px){
-  #main{padding:12px;} .grid{grid-template-columns:1fr;}
-  .verdict .headline{font-size:27px;}
+/* ---- top bar --------------------------------------------------------------- */
+#topbar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px var(--gut);
+  border-bottom: 1px solid var(--haze);
+}
+#topbar[hidden] { display: none; }
+.brand {
+  font: 500 12px/1 var(--mono);
+  letter-spacing: .22em;
+  color: var(--chalk);
+}
+.spacer { flex: 1; }
+#who { font: 400 12px/1 var(--mono); color: var(--faint); letter-spacing: .06em; }
+
+#main {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: clamp(28px, 7vw, 56px) var(--gut) 80px;
+}
+
+/* ---- buttons --------------------------------------------------------------- */
+.btn {
+  font: 500 14px/1 var(--body);
+  padding: 13px 20px;
+  min-height: 44px;
+  border-radius: 10px;
+  border: 1px solid var(--haze);
+  background: var(--raise);
+  color: var(--chalk);
+  cursor: pointer;
+  transition: background .18s var(--ease), border-color .18s var(--ease),
+              transform .18s var(--ease);
+}
+.btn:hover { background: var(--haze); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: .5; cursor: default; transform: none; }
+.btn-primary {
+  background: var(--chalk); color: var(--void); border-color: var(--chalk);
+  font-weight: 600;
+}
+.btn-primary:hover { background: #fff; border-color: #fff; }
+.btn-ghost { background: transparent; }
+.btn-ghost:hover { background: var(--raise); }
+.btn-sm { padding: 8px 13px; min-height: 34px; font-size: 13px; }
+.btn-quiet {
+  background: none; border: none; padding: 6px 9px; min-height: 32px;
+  font: 400 12px/1 var(--mono); color: var(--faint); letter-spacing: .06em;
+  border-radius: 7px; cursor: pointer;
+}
+.btn-quiet:hover { color: var(--chalk); background: var(--raise); }
+.btn-danger { color: var(--alert); border-color: color-mix(in srgb, var(--alert) 40%, transparent); }
+.btn-danger:hover { background: color-mix(in srgb, var(--alert) 14%, transparent); }
+
+:where(a, button, input, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--chalk);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ---- the turn plate: signature element ------------------------------------- */
+/* Two name panels. The wider, lit one is whose turn it is; the split moves in the
+   four discrete steps the ledger already computes — no more precision than that. */
+.plate {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 22px;
+}
+.panel {
+  --who: var(--dim);
+  flex: 1 1 auto;
+  min-width: 0;
+  /* Eyebrow pinned top, name pinned bottom, so the two names share a baseline
+     across panels however differently they're sized. */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: clamp(150px, 30vw, 196px);
+  padding: clamp(18px, 4.5vw, 26px) clamp(16px, 4vw, 24px);
+  border: 1px solid var(--haze);
+  border-radius: var(--r);
+  background: var(--shade);
+  transition: flex-basis .55s var(--ease), background .4s var(--ease),
+              border-color .4s var(--ease), opacity .4s var(--ease);
+}
+.panel[data-who="anirudh"] { --who: var(--anirudh); }
+.panel[data-who="pallavi"] { --who: var(--pallavi); }
+
+.panel .name {
+  margin: 18px 0 0;
+  font: 500 clamp(32px, 9.5vw, 52px)/.9 var(--display);
+  font-variation-settings: "SOFT" 30, "WONK" 1;
+  letter-spacing: -.02em;
+  color: var(--dim);
+  overflow-wrap: anywhere;
+  transition: color .4s var(--ease);
+}
+
+/* lit — whose turn it is */
+.panel-next {
+  flex: 0 0 calc(var(--split, 50) * 1% - 3px);
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--who) 15%, transparent), transparent 65%),
+    var(--shade);
+  border-color: color-mix(in srgb, var(--who) 45%, transparent);
+}
+.panel-next .eyebrow { color: var(--who); }
+.panel-next .name { color: var(--who); }
+
+/* receded — the one who's ahead and can sit this round out */
+.panel-ahead { opacity: .62; }
+.panel-ahead .name { font-size: clamp(22px, 6vw, 32px); }
+
+/* dead even: neither leads, so neither is lit brighter than the other */
+.plate-level .panel { flex: 1 1 0; opacity: 1; }
+.plate-level .panel .name {
+  color: var(--who);
+  font-size: clamp(24px, 7vw, 34px);
+}
+.plate-level .panel { border-color: color-mix(in srgb, var(--who) 30%, transparent); }
+
+.verdict-note {
+  margin: 0 0 44px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--dim);
+  max-width: 46ch;
+}
+.verdict-note strong { color: var(--chalk); font-weight: 600; }
+
+/* empty state: an invitation, not a shrug */
+.plate-empty {
+  padding: 40px 28px;
+  border: 1px dashed var(--haze);
+  border-radius: var(--r);
+  background: var(--shade);
+  margin-bottom: 22px;
+}
+.plate-empty .name {
+  margin: 12px 0 0;
+  font: 400 clamp(26px, 7vw, 36px)/1.05 var(--display);
+  font-variation-settings: "SOFT" 40, "WONK" 1;
+  color: var(--chalk);
+}
+
+/* ---- sections -------------------------------------------------------------- */
+.section { margin: 0 0 40px; }
+.section-head {
+  display: flex; align-items: center; gap: 14px;
+  margin: 0 0 18px;
+}
+.section-head::after {
+  content: ""; flex: 1; height: 1px; background: var(--haze);
+}
+
+/* ---- form ------------------------------------------------------------------ */
+.field { margin: 0 0 16px; }
+.field > .eyebrow { display: block; margin: 0 0 8px; }
+
+.input {
+  width: 100%;
+  padding: 13px 14px;
+  font: 400 16px/1.3 var(--body);
+  color: var(--chalk);
+  background: var(--shade);
+  border: 1px solid var(--haze);
+  border-radius: 10px;
+  transition: border-color .18s var(--ease), background .18s var(--ease);
+}
+.input::placeholder { color: var(--faint); }
+.input:hover { border-color: var(--faint); }
+.input:focus { outline: none; border-color: var(--chalk); background: var(--raise); }
+.input-amount { font-family: var(--mono); letter-spacing: .04em; }
+.input-date { font-family: var(--mono); font-size: 15px; }
+/* Safari/Chrome date pickers render a near-black glyph on a dark field otherwise. */
+.input-date::-webkit-calendar-picker-indicator { filter: invert(.8); cursor: pointer; }
+
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.hint { margin: 7px 0 0; font: 400 12px/1.4 var(--mono); color: var(--faint); }
+
+/* payer picker: two radios wearing each person's colour */
+.picker { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.picker input { position: absolute; opacity: 0; pointer-events: none; }
+.picker label {
+  --who: var(--dim);
+  display: flex; align-items: center; justify-content: center; gap: 9px;
+  padding: 13px 10px; min-height: 46px;
+  border: 1px solid var(--haze); border-radius: 10px;
+  background: var(--shade);
+  font: 500 15px/1 var(--body); color: var(--dim);
+  cursor: pointer;
+  transition: all .18s var(--ease);
+}
+.picker label[for$="anirudh"] { --who: var(--anirudh); }
+.picker label[for$="pallavi"] { --who: var(--pallavi); }
+.picker label::before {
+  content: ""; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--who); opacity: .35; transition: opacity .18s var(--ease);
+}
+.picker label:hover { border-color: var(--faint); }
+.picker input:checked + label {
+  color: var(--chalk);
+  border-color: color-mix(in srgb, var(--who) 55%, transparent);
+  background: color-mix(in srgb, var(--who) 13%, var(--shade));
+}
+.picker input:checked + label::before { opacity: 1; }
+.picker input:focus-visible + label { outline: 2px solid var(--chalk); outline-offset: 2px; }
+
+.actions { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+
+.error {
+  margin: 0 0 14px;
+  padding: 11px 13px;
+  font-size: 14px;
+  color: var(--alert);
+  background: color-mix(in srgb, var(--alert) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--alert) 32%, transparent);
+  border-radius: 9px;
+}
+.error:empty { display: none; }
+
+/* ---- history --------------------------------------------------------------- */
+.entries { list-style: none; margin: 0; padding: 0; }
+.entry {
+  --who: var(--dim);
+  display: flex; align-items: center; gap: 14px;
+  padding: 13px 15px;
+  margin: 0 0 7px;
+  background: var(--shade);
+  border: 1px solid transparent;
+  border-left: 3px solid var(--who);
+  border-radius: 4px 10px 10px 4px;
+  transition: background .16s var(--ease), border-color .16s var(--ease);
+}
+.entry[data-who="anirudh"] { --who: var(--anirudh); }
+.entry[data-who="pallavi"] { --who: var(--pallavi); }
+.entry:hover { background: var(--raise); }
+
+.entry-body { flex: 1; min-width: 0; }
+.entry-note {
+  display: block;
+  font-size: 15px; font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.entry-note-empty { color: var(--faint); font-style: italic; font-weight: 400; }
+/* One line, always. Squeezed narrow, "pallavi · 08 sep" would break mid-date and
+   read like two facts instead of one, so it clips instead of wrapping. */
+.entry-meta {
+  display: block; margin-top: 3px;
+  font: 400 11.5px/1.3 var(--mono);
+  letter-spacing: .07em;
+  color: var(--faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.entry-meta .who { color: var(--who); }
+
+/* The amount is stored, never shown. These dots are the whole product in one glyph. */
+.redacted {
+  font: 500 14px/1 var(--mono);
+  letter-spacing: .22em;
+  color: var(--dim);
+  cursor: help;
+  user-select: none;
+}
+
+.entry-tools { display: flex; gap: 2px; flex-shrink: 0; }
+
+.entry-count {
+  margin: 14px 0 0;
+  font: 400 12px/1.4 var(--mono);
+  color: var(--faint);
+}
+
+/* ---- inline edit ----------------------------------------------------------- */
+.edit {
+  padding: 18px;
+  margin: 0 0 7px;
+  background: var(--raise);
+  border: 1px solid var(--haze);
+  border-left: 3px solid var(--chalk);
+  border-radius: 4px 10px 10px 4px;
+}
+.edit .field:last-of-type { margin-bottom: 0; }
+
+/* ---- gate & refusal -------------------------------------------------------- */
+.gate { max-width: 460px; }
+.gate-title {
+  margin: 0 0 14px;
+  font: 500 clamp(40px, 12vw, 62px)/.92 var(--display);
+  font-variation-settings: "SOFT" 30, "WONK" 1;
+  letter-spacing: -.03em;
+}
+.gate-lede { margin: 0 0 34px; color: var(--dim); font-size: 17px; max-width: 34ch; }
+.gate-note { margin: 18px 0 0; font: 400 12px/1.5 var(--mono); color: var(--faint); }
+
+.footnote {
+  margin: 48px 0 0; padding-top: 18px;
+  border-top: 1px solid var(--haze);
+  font: 400 12px/1.5 var(--mono);
+  color: var(--faint);
+}
+
+/* ---- toast ----------------------------------------------------------------- */
+#toast {
+  position: fixed; left: 50%; bottom: 24px;
+  transform: translateX(-50%);
+  padding: 12px 20px;
+  background: var(--chalk); color: var(--void);
+  font: 500 14px/1 var(--body);
+  border-radius: 999px;
+  box-shadow: 0 10px 34px rgba(0, 0, 0, .5);
+  z-index: 40;
+}
+#toast[hidden] { display: none; }
+
+/* ---- responsive ------------------------------------------------------------ */
+@media (max-width: 520px) {
+  .field-row { grid-template-columns: 1fr; }
+  /* Stacked, the plate reads top-to-bottom and the lit panel simply stays taller;
+     the ahead panel collapses to a single line so the split still reads. */
+  .plate { flex-direction: column; }
+  .panel { min-height: 0; }
+  .panel-next { flex: 0 0 auto; min-height: 148px; }
+  .panel-ahead {
+    flex-direction: row; align-items: baseline; justify-content: space-between;
+    gap: 14px; padding-top: 16px; padding-bottom: 16px;
+  }
+  .panel-ahead .name { margin: 0; font-size: 24px; }
+  /* Give the note and meta back the width the dots and tools were taking. */
+  .entry { gap: 9px; padding: 12px 13px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    transition-duration: .001ms !important;
+  }
 }

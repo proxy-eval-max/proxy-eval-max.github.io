@@ -3,8 +3,8 @@ import { initializeAppCheck, ReCaptchaV3Provider }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app-check.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, doc, addDoc, deleteDoc, serverTimestamp,
-  onSnapshot, query, orderBy, limit, writeBatch, setDoc }
+import { getFirestore, collection, doc, addDoc, deleteDoc, updateDoc,
+  serverTimestamp, onSnapshot, query, orderBy, limit, writeBatch, setDoc }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { firebaseConfig, APP_CHECK_SITE_KEY } from "./firebase-config.js";
 
@@ -29,5 +29,5 @@ provider.setCustomParameters({ prompt: "select_account" });
 
 // Bundled dependency objects so other modules never import the CDN directly.
 export const authDeps = { auth, provider, signInWithPopup, signOut, onAuthStateChanged };
-export const dbDeps = { db, collection, doc, addDoc, deleteDoc, serverTimestamp,
-  onSnapshot, query, orderBy, limit, writeBatch, setDoc };
+export const dbDeps = { db, collection, doc, addDoc, deleteDoc, updateDoc,
+  serverTimestamp, onSnapshot, query, orderBy, limit, writeBatch, setDoc };

@@ -19,6 +19,7 @@ function fakeDeps({ failCommit = null } = {}) {
       const ops = [];
       return {
         set: (ref, data) => ops.push({ op: "set", ref, data }),
+        update: (ref, data) => ops.push({ op: "update", ref, data }),
         delete: ref => ops.push({ op: "delete", ref }),
         commit: async () => {
           if (failCommit) throw failCommit;
@@ -101,6 +102,70 @@ test("notes are collapsed and clipped to the length the rules allow", () => {
   assert.equal(db.sanitizeNote("  dinner   at   theirs \n"), "dinner at theirs");
   assert.equal(db.sanitizeNote("x".repeat(500)).length, db.MAX_NOTE);
   assert.equal(db.sanitizeNote(undefined), "");
+});
+
+const edit = { payer: "pallavi", note: "Thai place, split", at: "2026-09-07", uid: "u2" };
+const patchOf = deps => deps.commits[0].find(o => o.op === "update").data;
+
+test("updateEntry leaves the amount alone when none is given", async () => {
+  db.__resetThrottle();
+  const deps = fakeDeps();
+  await db.updateEntry(deps, "e1", edit);
+
+  const patch = patchOf(deps);
+  assert.equal("cents" in patch, false, "a blank amount must not overwrite the stored one");
+  assert.equal(patch.payer, "pallavi");
+  assert.equal(patch.note, "Thai place, split");
+  assert.equal(patch.at, "2026-09-07");
+});
+
+test("updateEntry overwrites the amount when one is given", async () => {
+  db.__resetThrottle();
+  const deps = fakeDeps();
+  await db.updateEntry(deps, "e1", { ...edit, cents: 3199 });
+  assert.equal(patchOf(deps).cents, 3199);
+});
+
+// The rules pin `by` and `createdAt` to their existing values, so the client must
+// not send them at all — an edit records who touched it, it doesn't rewrite origin.
+test("updateEntry never rewrites authorship or creation time", async () => {
+  db.__resetThrottle();
+  const deps = fakeDeps();
+  await db.updateEntry(deps, "e1", edit);
+
+  const patch = patchOf(deps);
+  assert.equal("by" in patch, false);
+  assert.equal("createdAt" in patch, false);
+  assert.equal(patch.editedBy, "u2");
+  assert.equal(patch.editedAt, "SERVER_TIME");
+});
+
+test("updateEntry targets the right document and bumps the meter too", async () => {
+  db.__resetThrottle();
+  const deps = fakeDeps();
+  await db.updateEntry(deps, "e1", edit);
+
+  const [ops] = deps.commits;
+  assert.equal(deps.commits.length, 1);
+  assert.deepEqual(ops.find(o => o.op === "update").ref.path,
+    ["ledgers", "shared", "entries", "e1"]);
+  assert.deepEqual(ops.find(o => o.op === "set").ref.path,
+    ["ledgers", "shared", "meters", "u2"]);
+});
+
+test("updateEntry is throttled and validated like a create", async () => {
+  db.__resetThrottle();
+  const deps = fakeDeps();
+  await assert.rejects(() => db.updateEntry(deps, "", edit), /bad-entry/);
+  await assert.rejects(() => db.updateEntry(deps, "e1", { ...edit, at: "" }), /bad-entry/);
+  await assert.rejects(() => db.updateEntry(deps, "e1", { ...edit, payer: "" }), /bad-entry/);
+  await assert.rejects(() => db.updateEntry(deps, "e1", { ...edit, cents: 0 }), /bad-entry/);
+  await assert.rejects(() => db.updateEntry(deps, "e1", { ...edit, cents: 1.5 }), /bad-entry/);
+  await assert.rejects(() => db.updateEntry(deps, "e1", { ...edit, uid: null }), /no-session/);
+  assert.equal(deps.commits.length, 0);
+
+  await db.updateEntry(deps, "e1", edit);
+  await assert.rejects(() => db.updateEntry(deps, "e1", edit), /too-fast/);
 });
 
 test("deleteAll chunks into batches under the Firestore limit", async () => {

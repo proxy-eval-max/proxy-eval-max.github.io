@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseAmount, totals, netBalance, verdict, activity } from "../js/ledger.js";
+import { parseAmount, totals, netBalance, verdict, activity, plateSplit, shortDate }
+  from "../js/ledger.js";
 
 const e = (payer, cents, extra = {}) => ({ payer, cents, ...extra });
 
@@ -53,10 +54,33 @@ test("tilt buckets widen as the gap grows", () => {
 test("verdict leaks no amounts", () => {
   const v = verdict([e("anirudh", 133742), e("pallavi", 999)]);
   assert.deepEqual(Object.keys(v).sort(),
-    ["count", "detail", "headline", "payer", "payerName", "tilt"]);
+    ["ahead", "aheadName", "count", "detail", "headline", "payer", "payerName", "tilt"]);
   const text = `${v.headline} ${v.detail}`;
   assert.equal(/\d/.test(text), false, `found a digit in "${text}"`);
   assert.equal(typeof v.count, "number"); // a count of entries is not an amount
+});
+
+test("verdict names both sides so the plate can label them", () => {
+  const v = verdict([e("anirudh", 9000), e("pallavi", 1000)]);
+  assert.equal(v.payerName, "Pallavi");
+  assert.equal(v.aheadName, "Anirudh");
+  assert.notEqual(v.payer, v.ahead);
+});
+
+// The plate's split is a drawing of the tilt bucket, so it must carry exactly the
+// same four steps — no finer resolution sneaking a number back onto the screen.
+test("plateSplit exposes only the four tilt buckets", () => {
+  assert.deepEqual(["even", "slight", "clear", "wide"].map(plateSplit), [50, 58, 66, 74]);
+  assert.equal(plateSplit("empty"), 50);
+  assert.equal(plateSplit("nonsense"), 50);
+});
+
+test("shortDate formats for the mono caption and passes junk through", () => {
+  assert.equal(shortDate("2026-09-08"), "08 sep");
+  assert.equal(shortDate("2026-01-31"), "31 jan");
+  assert.equal(shortDate("2026-12-01"), "01 dec");
+  assert.equal(shortDate("not a date"), "not a date");
+  assert.equal(shortDate(""), "");
 });
 
 test("activity drops amounts and sorts newest first", () => {
@@ -69,6 +93,15 @@ test("activity drops amounts and sorts newest first", () => {
   assert.equal(rows[0].payerName, "Anirudh");
   assert.equal(rows[0].note, "Late one");
   for (const r of rows) assert.equal("cents" in r, false);
+});
+
+test("activity flags edited entries", () => {
+  const rows = activity([
+    e("anirudh", 500, { id: "a", at: "2026-09-01", editedAt: { seconds: 1 } }),
+    e("pallavi", 500, { id: "b", at: "2026-08-01" }),
+  ]);
+  assert.equal(rows.find(r => r.id === "a").edited, true);
+  assert.equal(rows.find(r => r.id === "b").edited, false);
 });
 
 test("activity respects the limit and survives missing notes", () => {
