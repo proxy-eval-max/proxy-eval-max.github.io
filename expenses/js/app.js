@@ -308,7 +308,9 @@ function mountGate() {
     }
   };
   root.append(el("div", { class: "gate" }, [
-    el("p", { class: "eyebrow", text: "anirudh & pallavi" }),
+    // No names before sign-in — a stranger who lands here shouldn't learn whose
+    // ledger this is. The names appear once you're through the gate.
+    el("p", { class: "eyebrow", text: "private ledger" }),
     el("h1", { class: "gate-title", text: "Whose turn" }),
     el("p", { class: "gate-lede",
       text: "Log what each of you spends. It won't tell you the numbers — only who's up next." }),
