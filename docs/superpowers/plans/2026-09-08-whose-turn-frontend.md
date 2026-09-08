@@ -47,19 +47,30 @@ Two constraints that override everything below:
 
 Items 1–3 are really one refactor and should land together.
 
-- [ ] **1. Animate the handover, not just the split.** `--split` transitions
+- [x] **1. Animate the handover, not just the split.** `--split` transitions
   smoothly today, but when the verdict changes hands `turnPlate()` rebuilds the
   panels in swapped DOM order — so the one moment that matters, the handover,
   is the one moment that jumps. Render both panels in a fixed order and drive
   position and lit-state from CSS classes, so the emphasis slides across.
-- [ ] **2. Stop re-rendering all of history on every snapshot.** `refresh()`
+  Done: the plate is built once and mutated in place; each panel carries
+  `data-role="next|ahead|level|empty"` and every visual difference between the
+  roles is a transitioned property. The empty state is now the same two panels
+  unlit and dashed, rather than a separate box that gets replaced — so the first
+  entry lights a panel that was already there.
+- [x] **2. Stop re-rendering all of history on every snapshot.** `refresh()`
   clears both slots and rebuilds. Every live update from the other person kills
   hover state, scroll anchoring and any in-flight transition, and makes row-level
   animation impossible. Reconcile by entry id: patch, insert, remove.
-- [ ] **3. Make a new entry announce itself.** Once rows persist across renders, a
+  Done: `rowNodes` maps id → `{ node, sig }`, and a row whose signature is
+  unchanged is never touched. The signature deliberately excludes `editDraft`,
+  so a row open for editing keeps its node and what you typed survives the other
+  person's write landing mid-sentence.
+- [x] **3. Make a new entry announce itself.** Once rows persist across renders, a
   newly arrived row can fade-and-slide in with its owner's accent flashing once.
   "She just logged something" arriving live is the most useful event in the
   product, and right now it is indistinguishable from a re-render.
+  Done: `.is-new` runs a slide-in plus a 1.5s accent flash, suppressed on the
+  first paint so signing in doesn't set the whole list off.
 - [ ] **4. Replace the native date input.** `08/09/2026` in browser chrome is the
   one element that ignores the type system, and its format is locale-dependent so
   it reads ambiguously. Two chips — `today` / `yesterday` — cover almost all
@@ -69,10 +80,13 @@ Items 1–3 are really one refactor and should land together.
   `--void` theme colour is a large perceived-quality jump for very little code.
   Firestore offline persistence alongside it would let the page open and render
   the last known verdict with no signal.
-- [ ] **6. Announce verdict changes to assistive tech.** The plate swaps silently;
+- [x] **6. Announce verdict changes to assistive tech.** The plate swaps silently;
   an `aria-live="polite"` region carrying `v.headline` makes the page's single
   output perceivable without sight. Related: after saving or cancelling an edit,
   focus lands nowhere — it should return to that row's edit button.
+  Done: a `.sr-only` `#live` region carries headline and detail, written only
+  when the text actually changes so a re-render doesn't re-announce; `closeEdit()`
+  returns focus to the row's edit button on both save and cancel.
 
 ## Later, if the product grows
 

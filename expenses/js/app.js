@@ -54,37 +54,51 @@ function sectionHead(label) {
 }
 
 // ---- the turn plate --------------------------------------------------------
+//
+// Built once and mutated in place. Each person keeps their own side of the plate
+// for good — the panels never change DOM order — so when the turn changes hands
+// the emphasis slides across instead of jumping. That handover is the single most
+// important moment in the product; it deserves to be the smoothest.
 
-function turnPlate() {
-  const v = verdict(entries);
-  const wrap = el("div");
+const EYEBROW = { empty: "", level: "level", next: "pays next", ahead: "is ahead" };
 
-  if (v.tilt === "empty") {
-    wrap.append(el("div", { class: "plate-empty" }, [
-      el("p", { class: "eyebrow", text: "nothing logged" }),
-      el("p", { class: "name", text: "Add the first expense" }),
+function plateEl() {
+  const panels = MEMBERS.map(m =>
+    el("div", { class: "panel", id: `panel-${m.id}`, "data-who": m.id,
+      "data-role": "empty" }, [
+      el("p", { class: "eyebrow" }),
+      el("p", { class: "name" }),
     ]));
-  } else if (!v.payer) {
-    wrap.append(el("div", { class: "plate plate-level" },
-      MEMBERS.map(m => panel(m.id, "level"))));
-  } else {
-    const plate = el("div", { class: "plate" }, [
-      panel(v.payer, "pays next", "panel-next"),
-      panel(v.ahead, "is ahead", "panel-ahead"),
-    ]);
-    plate.style.setProperty("--split", plateSplit(v.tilt));
-    wrap.append(plate);
-  }
-
-  wrap.append(el("p", { class: "verdict-note", text: v.detail }));
-  return wrap;
+  return el("div", {}, [
+    el("div", { class: "plate", id: "plate" }, panels),
+    el("p", { class: "verdict-note", id: "verdict-note" }),
+  ]);
 }
 
-function panel(who, eyebrow, extra = "") {
-  return el("div", { class: `panel ${extra}`.trim(), "data-who": who }, [
-    el("p", { class: "eyebrow", text: eyebrow }),
-    el("p", { class: "name", text: nameOf(who) }),
-  ]);
+function updatePlate() {
+  const v = verdict(entries);
+  const plate = qs("#plate");
+  plate.style.setProperty("--split", plateSplit(v.tilt));
+
+  for (const m of MEMBERS) {
+    const panel = qs(`#panel-${m.id}`);
+    const role = v.tilt === "empty" ? "empty"
+      : !v.payer ? "level"
+      : m.id === v.payer ? "next" : "ahead";
+    panel.dataset.role = role;
+    qs(".eyebrow", panel).textContent = EYEBROW[role];
+    qs(".name", panel).textContent = nameOf(m.id);
+  }
+
+  qs("#verdict-note").textContent =
+    v.tilt === "empty" ? `${v.headline} — ${v.detail}` : v.detail;
+  // The plate is the page's only output, and it changes silently. Say it.
+  announce(v.tilt === "empty" ? v.headline : v.headline + ". " + v.detail);
+}
+
+function announce(msg) {
+  const live = qs("#live");
+  if (live && live.textContent !== msg) live.textContent = msg;
 }
 
 // ---- add form (built once, never re-rendered under you) --------------------
@@ -156,31 +170,103 @@ function writeError(e) {
 
 // ---- history ---------------------------------------------------------------
 
-function historySection() {
+// Built once, like the plate. The list below it is reconciled by entry id rather
+// than rebuilt, which is what makes row-level animation possible at all: an
+// untouched row keeps its node, so it keeps its hover state, its focus, its
+// scroll position, and any transition already running on it.
+function historyShell() {
+  return el("section", { class: "section" }, [
+    sectionHead("history"),
+    el("p", { class: "section-note", id: "history-note",
+      text: "amounts are stored, never shown" }),
+    el("p", { class: "hint", id: "history-empty", text: "nothing here yet" }),
+    el("ul", { class: "entries", id: "entry-list" }),
+    el("div", { id: "history-foot" }),
+  ]);
+}
+
+// id -> { node, sig }. `sig` is everything about a row that's visible; if it
+// hasn't changed, the node is left completely alone.
+const rowNodes = new Map();
+let historyPainted = false;
+
+function rowSignature(r) {
+  const mode = r.id === editingId ? "edit" : r.id === removingId ? "confirm" : "row";
+  // editDraft is deliberately absent: while a row is open for editing its node
+  // is preserved untouched, so what's typed into it survives a live snapshot
+  // without the draft having to be replayed at all.
+  return [mode, r.payer, r.note, r.at, r.edited].join(" ");
+}
+
+function updateHistory() {
   const rows = activity(entries, shownLimit);
-  const section = el("section", { class: "section" }, [sectionHead("history")]);
-  if (!rows.length) {
-    section.append(el("p", { class: "hint", text: "nothing here yet" }));
-    return section;
+  const ul = qs("#entry-list");
+  qs("#history-note").hidden = !rows.length;
+  qs("#history-empty").hidden = rows.length > 0;
+
+  const seen = new Set();
+  let cursor = 0;
+  for (const r of rows) {
+    seen.add(r.id);
+    const sig = rowSignature(r);
+    let rec = rowNodes.get(r.id);
+
+    if (!rec) {
+      const node = buildRow(r);
+      // Everything is "new" on the first paint; only announce arrivals after it.
+      if (historyPainted) markNew(node);
+      ul.insertBefore(node, ul.children[cursor] || null);
+      rowNodes.set(r.id, { node, sig });
+    } else if (rec.sig !== sig) {
+      const node = buildRow(r);
+      if (rec.node.parentNode === ul) ul.replaceChild(node, rec.node);
+      else ul.insertBefore(node, ul.children[cursor] || null);
+      rowNodes.set(r.id, { node, sig });
+    } else if (ul.children[cursor] !== rec.node) {
+      ul.insertBefore(rec.node, ul.children[cursor] || null);
+    }
+    cursor++;
   }
 
-  // Stated once, in the open. This used to be a title tooltip on the dots, which
-  // touch and keyboard users never saw at all.
-  section.append(el("p", { class: "section-note",
-    text: "amounts are stored, never shown" }));
+  for (const [id, rec] of rowNodes) {
+    if (seen.has(id)) continue;
+    rec.node.remove();
+    rowNodes.delete(id);
+  }
 
-  section.append(el("ul", { class: "entries" },
-    rows.map(r => r.id === editingId ? editRow(r) : entryRow(r))));
+  updateHistoryFoot(rows.length);
+  historyPainted = true;
+}
 
-  if (entries.length > rows.length) {
+function buildRow(r) {
+  const node = r.id === editingId ? editRow(r) : entryRow(r);
+  node.dataset.id = r.id;
+  return node;
+}
+
+// One pass of the owner's accent, then the class comes off so a later reorder
+// can't retrigger it.
+function markNew(node) {
+  node.classList.add("is-new");
+  // Two animations run: the slide-in finishes first, the accent flash last, so
+  // only the flash's end means "done" — otherwise the flash is cut off at .34s.
+  node.addEventListener("animationend", (e) => {
+    if (e.animationName === "entry-flash") node.classList.remove("is-new");
+  });
+}
+
+function updateHistoryFoot(shown) {
+  const foot = qs("#history-foot");
+  clear(foot);
+  if (!shown) return;
+
+  if (entries.length > shown) {
     const more = el("button", { class: "btn btn-ghost btn-sm", type: "button",
-      text: `Show ${Math.min(ROWS_PER_PAGE, entries.length - rows.length)} more` });
+      text: `Show ${Math.min(ROWS_PER_PAGE, entries.length - shown)} more` });
     more.onclick = () => { shownLimit += ROWS_PER_PAGE; refresh(); };
-    section.append(el("div", { class: "actions" }, [more]));
+    foot.append(el("div", { class: "actions" }, [more]));
   }
-
-  section.append(settleControl());
-  return section;
+  foot.append(settleControl());
 }
 
 // Clearing the ledger is irreversible, so it gets a real panel rather than a
@@ -268,6 +354,14 @@ function rowTools(r) {
   return el("div", { class: "entry-tools" }, [edit, remove]);
 }
 
+// Closing an edit form leaves focus nowhere, which strands anyone on a keyboard
+// at the top of the document. Hand it back to the row they came from.
+function closeEdit(id) {
+  editingId = null; editDraft = null;
+  refresh();
+  qs(`[data-id="${id}"] .btn-quiet`)?.focus();
+}
+
 // Editing without breaking the premise: note, date and payer prefill normally, but
 // the amount field starts blank. Leave it blank and the stored amount is untouched;
 // type a new one and it's overwritten. You never get shown the old number.
@@ -289,7 +383,7 @@ function editRow(r) {
     text: "Save changes" });
   const cancel = el("button", { class: "btn btn-ghost btn-sm", type: "button",
     text: "Cancel" });
-  cancel.onclick = () => { editingId = null; editDraft = null; refresh(); };
+  cancel.onclick = () => { closeEdit(r.id); };
 
   const form = el("form", { class: "edit", novalidate: true }, [
     err,
@@ -337,9 +431,8 @@ function editRow(r) {
     try {
       await db.updateEntry(dbDeps, r.id, { payer, cents, note: note.value, at,
         uid: auth.currentUser(authDeps).uid });
-      editingId = null; editDraft = null;
       toast("Entry updated.");
-      refresh();
+      closeEdit(r.id);
     } catch (e) {
       err.textContent = writeError(e);
       busy = false; save.disabled = false; save.textContent = "Save changes";
@@ -407,10 +500,15 @@ function mount() {
   qs("#logout-btn").onclick = () => auth.logout(authDeps);
 
   const root = main(); clear(root);
+  rowNodes.clear();
+  historyPainted = false;
   root.append(
-    el("div", { id: "plate-slot" }),
+    // Nothing here is rebuilt on refresh: the plate is mutated in place and the
+    // list is reconciled, so live updates never yank the page out from under you.
+    el("div", { id: "live", class: "sr-only", role: "status", "aria-live": "polite" }),
+    plateEl(),
     addSection(),
-    el("div", { id: "history-slot" }),
+    historyShell(),
   );
   if (!appCheckEnabled) root.append(el("p", { class: "footnote",
     text: "app check is off — see expenses/README.md before sharing this url." }));
@@ -418,15 +516,16 @@ function mount() {
 }
 
 function refresh() {
-  const p = qs("#plate-slot"), h = qs("#history-slot");
-  if (!p || !h) return;
-  clear(p); p.append(turnPlate());
-  clear(h); h.append(historySection());
+  if (!qs("#plate")) return;
+  updatePlate();
+  updateHistory();
 }
 
 function teardown() {
   if (unsub) { unsub(); unsub = null; }
   entries = []; me = null; editingId = null; editDraft = null;
+  removingId = null; settling = false; shownLimit = ROWS_PER_PAGE;
+  rowNodes.clear(); historyPainted = false;
   forgetNames(); // signing out should also drop the names from memory
 }
 

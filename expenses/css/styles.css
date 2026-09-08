@@ -110,6 +110,17 @@ body {
 .btn-danger { color: var(--alert); border-color: color-mix(in srgb, var(--alert) 40%, transparent); }
 .btn-danger:hover { background: color-mix(in srgb, var(--alert) 14%, transparent); }
 
+/* Read by screen readers, never painted. Not display:none — that would take the
+   live region out of the accessibility tree and silence it. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 :where(a, button, input, select, [tabindex]):focus-visible {
   outline: 2px solid var(--chalk);
   outline-offset: 2px;
@@ -152,31 +163,50 @@ body {
   letter-spacing: -.02em;
   color: var(--dim);
   overflow-wrap: anywhere;
-  transition: color .4s var(--ease);
+  transition: color .4s var(--ease), font-size .55s var(--ease);
 }
 
+/* Roles, not DOM order. Both panels stay put and the emphasis moves between
+   them, so a handover is one continuous slide rather than a swap-and-jump.
+   The name size transitions too — see the .panel .name transition above. */
+
 /* lit — whose turn it is */
-.panel-next {
+.panel[data-role="next"] {
   flex: 0 0 calc(var(--split, 50) * 1% - 3px);
   background:
     linear-gradient(160deg, color-mix(in srgb, var(--who) 15%, transparent), transparent 65%),
     var(--shade);
   border-color: color-mix(in srgb, var(--who) 45%, transparent);
 }
-.panel-next .eyebrow { color: var(--who); }
-.panel-next .name { color: var(--who); }
+.panel[data-role="next"] .eyebrow { color: var(--who); }
+.panel[data-role="next"] .name { color: var(--who); }
 
 /* receded — the one who's ahead and can sit this round out */
-.panel-ahead { opacity: .62; }
-.panel-ahead .name { font-size: clamp(22px, 6vw, 32px); }
+.panel[data-role="ahead"] {
+  flex: 1 1 auto;
+  opacity: .62;
+}
+.panel[data-role="ahead"] .name { font-size: clamp(22px, 6vw, 32px); }
 
 /* dead even: neither leads, so neither is lit brighter than the other */
-.plate-level .panel { flex: 1 1 0; opacity: 1; }
-.plate-level .panel .name {
+.panel[data-role="level"] {
+  flex: 1 1 0;
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--who) 30%, transparent);
+}
+.panel[data-role="level"] .name {
   color: var(--who);
   font-size: clamp(24px, 7vw, 34px);
 }
-.plate-level .panel { border-color: color-mix(in srgb, var(--who) 30%, transparent); }
+
+/* empty state: an invitation, not a shrug. Same two panels, unlit and dashed,
+   so the first entry lights one of them in place instead of replacing the box. */
+.panel[data-role="empty"] {
+  flex: 1 1 0;
+  border-style: dashed;
+  min-height: clamp(120px, 24vw, 150px);
+}
+.panel[data-role="empty"] .name { font-size: clamp(24px, 7vw, 34px); }
 
 .verdict-note {
   margin: 0 0 44px;
@@ -186,21 +216,6 @@ body {
   max-width: 46ch;
 }
 .verdict-note strong { color: var(--chalk); font-weight: 600; }
-
-/* empty state: an invitation, not a shrug */
-.plate-empty {
-  padding: 40px 28px;
-  border: 1px dashed var(--haze);
-  border-radius: var(--r);
-  background: var(--shade);
-  margin-bottom: 22px;
-}
-.plate-empty .name {
-  margin: 12px 0 0;
-  font: 400 clamp(26px, 7vw, 36px)/1.05 var(--display);
-  font-variation-settings: "SOFT" 40, "WONK" 1;
-  color: var(--chalk);
-}
 
 /* ---- sections -------------------------------------------------------------- */
 .section { margin: 0 0 40px; }
@@ -323,6 +338,24 @@ body {
 .entry[data-who="p2"] { --who: var(--who-2); }
 .entry:hover { background: var(--raise); }
 
+/* A row that has just arrived — usually from the other person, live — slides in
+   and flashes its owner's accent once. Live arrival is the most useful event in
+   the product; without this it is indistinguishable from a re-render. */
+@keyframes entry-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes entry-flash {
+  0%   { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--who) 55%, transparent),
+                     0 0 0 0 color-mix(in srgb, var(--who) 40%, transparent);
+         background: color-mix(in srgb, var(--who) 13%, var(--shade)); }
+  100% { box-shadow: inset 0 0 0 1px transparent, 0 0 0 0 transparent;
+         background: var(--shade); }
+}
+.entry.is-new {
+  animation: entry-in .34s var(--ease) both, entry-flash 1.5s var(--ease) .1s both;
+}
+
 .entry-body { flex: 1; min-width: 0; }
 /* Two lines maximum. A 140-character note would otherwise triple a row's height
    and break the rhythm of the list; the full text stays in the title. */
@@ -416,12 +449,13 @@ body {
      the ahead panel collapses to a single line so the split still reads. */
   .plate { flex-direction: column; }
   .panel { min-height: 0; }
-  .panel-next { flex: 0 0 auto; min-height: 148px; }
-  .panel-ahead {
+  .panel[data-role="next"] { flex: 0 0 auto; min-height: 148px; }
+  .panel[data-role="ahead"] {
     flex-direction: row; align-items: baseline; justify-content: space-between;
     gap: 14px; padding-top: 16px; padding-bottom: 16px;
   }
-  .panel-ahead .name { margin: 0; font-size: 24px; }
+  .panel[data-role="ahead"] .name { margin: 0; font-size: 24px; }
+  .panel[data-role="empty"] { min-height: 104px; }
   /* Give the note and meta back the width the dots and tools were taking. */
   .entry { gap: 9px; padding: 12px 13px; }
 }
