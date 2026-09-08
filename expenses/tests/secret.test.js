@@ -19,7 +19,10 @@ test("a malformed or tampered record yields null instead of throwing", async () 
   assert.equal(await unseal({}, "k"), null);
   const rec = await seal("hello there", "k");
   // Flip a byte of ciphertext: GCM authenticates, so this must fail closed.
-  const bad = { ...rec, ciphertext: "A" + rec.ciphertext.slice(1) };
+  // Substitute rather than prepend a fixed char — "A" + slice(1) is a no-op
+  // whenever the first character already is "A", which is a 1-in-64 flake.
+  const bad = { ...rec,
+    ciphertext: rec.ciphertext.replace(/^./, c => (c === "A" ? "B" : "A")) };
   assert.equal(await unseal(bad, "k"), null);
 });
 

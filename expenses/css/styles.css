@@ -113,7 +113,8 @@ body {
 :where(a, button, input, select, [tabindex]):focus-visible {
   outline: 2px solid var(--chalk);
   outline-offset: 2px;
-  border-radius: 6px;
+  /* No border-radius here: outlines already follow the element's own corners, and
+     forcing one would fight the 10-14px radii the components set for themselves. */
 }
 
 /* ---- the turn plate: signature element ------------------------------------- */
@@ -277,6 +278,34 @@ body {
 }
 .error:empty { display: none; }
 
+/* Said once, to everyone — replaces a title tooltip that touch and keyboard
+   users never saw. */
+.section-note {
+  margin: -8px 0 16px;
+  font: 400 12px/1.5 var(--mono);
+  color: var(--faint);
+}
+
+/* ---- destructive confirms -------------------------------------------------- */
+/* In-page, so the only remaining unstyled surface (window.confirm) is gone. */
+.confirm-inline {
+  display: flex; align-items: center; gap: 2px;
+  font: 400 12px/1 var(--mono); color: var(--alert); letter-spacing: .06em;
+}
+.confirm-inline .q { padding-right: 6px; white-space: nowrap; }
+.btn-quiet.is-yes { color: var(--alert); }
+.btn-quiet.is-yes:hover { color: var(--alert); background: color-mix(in srgb, var(--alert) 16%, transparent); }
+
+.confirm-panel {
+  margin-top: 20px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--alert) 34%, transparent);
+  border-radius: var(--r);
+  background: color-mix(in srgb, var(--alert) 8%, var(--shade));
+}
+.confirm-panel .eyebrow { color: var(--alert); }
+.confirm-panel p { margin: 10px 0 0; font-size: 15px; color: var(--dim); max-width: 46ch; }
+
 /* ---- history --------------------------------------------------------------- */
 .entries { list-style: none; margin: 0; padding: 0; }
 .entry {
@@ -295,8 +324,13 @@ body {
 .entry:hover { background: var(--raise); }
 
 .entry-body { flex: 1; min-width: 0; }
+/* Two lines maximum. A 140-character note would otherwise triple a row's height
+   and break the rhythm of the list; the full text stays in the title. */
 .entry-note {
-  display: block;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   font-size: 15px; font-weight: 500;
   overflow-wrap: anywhere;
 }
@@ -311,6 +345,8 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Fixed-width digits, so dates don't shimmer as rows update around them. */
+  font-variant-numeric: tabular-nums;
 }
 .entry-meta .who { color: var(--who); }
 

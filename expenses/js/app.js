@@ -9,12 +9,19 @@ import { verdict, activity, parseAmount, plateSplit, shortDate, todayIso } from 
 
 const main = () => qs("#main");
 
+// History renders a page at a time. All the loaded entries still count towards the
+// verdict — this only bounds how many rows are drawn.
+const ROWS_PER_PAGE = 30;
+
 let me = null;       // the signed-in member, once their email hash matches
 let entries = [];    // live mirror of the ledger
 let unsub = null;    // snapshot listener teardown
 let busy = false;    // one write in flight at a time
 let editingId = null;
 let editDraft = null; // survives a snapshot arriving mid-edit
+let removingId = null; // row waiting on its inline "remove?" confirm
+let settling = false;  // settle-up confirm panel is open
+let shownLimit = ROWS_PER_PAGE;
 
 function toast(msg) {
   const t = qs("#toast"); t.textContent = msg; t.hidden = false;
@@ -150,60 +157,115 @@ function writeError(e) {
 // ---- history ---------------------------------------------------------------
 
 function historySection() {
-  const rows = activity(entries, 30);
+  const rows = activity(entries, shownLimit);
   const section = el("section", { class: "section" }, [sectionHead("history")]);
   if (!rows.length) {
     section.append(el("p", { class: "hint", text: "nothing here yet" }));
     return section;
   }
 
+  // Stated once, in the open. This used to be a title tooltip on the dots, which
+  // touch and keyboard users never saw at all.
+  section.append(el("p", { class: "section-note",
+    text: "amounts are stored, never shown" }));
+
   section.append(el("ul", { class: "entries" },
     rows.map(r => r.id === editingId ? editRow(r) : entryRow(r))));
 
-  if (entries.length > rows.length)
-    section.append(el("p", { class: "entry-count",
-      text: `showing ${rows.length} of ${entries.length}` }));
+  if (entries.length > rows.length) {
+    const more = el("button", { class: "btn btn-ghost btn-sm", type: "button",
+      text: `Show ${Math.min(ROWS_PER_PAGE, entries.length - rows.length)} more` });
+    more.onclick = () => { shownLimit += ROWS_PER_PAGE; refresh(); };
+    section.append(el("div", { class: "actions" }, [more]));
+  }
 
-  const settle = el("button", { class: "btn btn-danger btn-sm", type: "button",
-    text: "We settled up — clear it" });
-  settle.onclick = async () => {
-    if (!confirm(`Delete all ${entries.length} entries? Do this only once you've `
-      + `actually squared up. It can't be undone.`)) return;
-    settle.disabled = true;
-    try { await db.deleteAll(dbDeps, entries.map(e => e.id)); toast("Cleared."); }
-    catch { toast("Couldn't clear everything."); settle.disabled = false; }
-  };
-  section.append(el("div", { class: "actions" }, [settle]));
+  section.append(settleControl());
   return section;
 }
 
-function entryRow(r) {
-  const edit = el("button", { class: "btn-quiet", type: "button", text: "edit",
-    "aria-label": `Edit ${r.note || "entry"}` });
-  edit.onclick = () => { editingId = r.id; editDraft = null; refresh(); };
+// Clearing the ledger is irreversible, so it gets a real panel rather than a
+// browser dialog. `settling` lives outside the render, so the other person's
+// write landing mid-decision doesn't dismiss the question.
+function settleControl() {
+  if (!settling) {
+    const open = el("button", { class: "btn btn-danger btn-sm", type: "button",
+      text: "We settled up — clear it" });
+    open.onclick = () => { settling = true; refresh(); };
+    return el("div", { class: "actions" }, [open]);
+  }
 
-  const remove = el("button", { class: "btn-quiet", type: "button", text: "remove",
-    "aria-label": `Remove ${r.note || "entry"}` });
-  remove.onclick = async () => {
-    if (!confirm("Remove this entry?")) return;
-    remove.disabled = true;
-    try { await db.deleteEntry(dbDeps, r.id); }
-    catch { toast("Couldn't remove that."); remove.disabled = false; }
+  const go = el("button", { class: "btn btn-danger btn-sm", type: "button",
+    text: `Yes, delete all ${entries.length}` });
+  const cancel = el("button", { class: "btn btn-ghost btn-sm", type: "button",
+    text: "Keep them" });
+  cancel.onclick = () => { settling = false; refresh(); };
+  go.onclick = async () => {
+    go.disabled = true; cancel.disabled = true; go.textContent = "Clearing…";
+    try {
+      await db.deleteAll(dbDeps, entries.map(e => e.id));
+      settling = false; shownLimit = ROWS_PER_PAGE;
+      toast("Cleared.");
+    } catch {
+      toast("Couldn't clear everything.");
+      go.disabled = false; cancel.disabled = false;
+    }
   };
 
+  return el("div", { class: "confirm-panel" }, [
+    el("p", { class: "eyebrow", text: "this can't be undone" }),
+    el("p", { text: "Every entry goes, for both of you. Do this once you've "
+      + "actually squared up — the ledger starts over from level." }),
+    el("div", { class: "actions" }, [go, cancel]),
+  ]);
+}
+
+function entryRow(r) {
   return el("li", { class: "entry", "data-who": r.payer }, [
     el("div", { class: "entry-body" }, [
+      // Clamped to two lines in CSS; the title carries the rest for anyone who
+      // wrote a paragraph about a sandwich.
       el("span", { class: r.note ? "entry-note" : "entry-note entry-note-empty",
-        text: r.note || "no note" }),
+        title: r.note || "", text: r.note || "no note" }),
       el("span", { class: "entry-meta" }, [
         el("span", { class: "who", text: r.payerName.toLowerCase() }),
         ` · ${shortDate(r.at)}${r.edited ? " · edited" : ""}`,
       ]),
     ]),
-    el("span", { class: "redacted", title: "Amounts are stored but never shown",
-      "aria-label": "amount hidden", text: "•••" }),
-    el("div", { class: "entry-tools" }, [edit, remove]),
+    el("span", { class: "redacted", "aria-label": "amount hidden", text: "•••" }),
+    rowTools(r),
   ]);
+}
+
+// Two-step removal in place of window.confirm: the row asks, and only the second
+// tap deletes. `removingId` sits outside the render so a live snapshot can't
+// answer the question for you.
+function rowTools(r) {
+  if (removingId === r.id) {
+    const yes = el("button", { class: "btn-quiet is-yes", type: "button", text: "yes",
+      "aria-label": `Confirm removing ${r.note || "entry"}` });
+    const no = el("button", { class: "btn-quiet", type: "button", text: "no" });
+    no.onclick = () => { removingId = null; refresh(); };
+    yes.onclick = async () => {
+      yes.disabled = true; no.disabled = true;
+      try { await db.deleteEntry(dbDeps, r.id); removingId = null; }
+      catch {
+        toast("Couldn't remove that.");
+        yes.disabled = false; no.disabled = false;
+      }
+    };
+    return el("div", { class: "entry-tools confirm-inline" }, [
+      el("span", { class: "q", text: "remove?" }), yes, no]);
+  }
+
+  const edit = el("button", { class: "btn-quiet", type: "button", text: "edit",
+    "aria-label": `Edit ${r.note || "entry"}` });
+  edit.onclick = () => { editingId = r.id; editDraft = null; removingId = null; refresh(); };
+
+  const remove = el("button", { class: "btn-quiet", type: "button", text: "remove",
+    "aria-label": `Remove ${r.note || "entry"}` });
+  remove.onclick = () => { removingId = r.id; editingId = null; refresh(); };
+
+  return el("div", { class: "entry-tools" }, [edit, remove]);
 }
 
 // Editing without breaking the premise: note, date and payer prefill normally, but
