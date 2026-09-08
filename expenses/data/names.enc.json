@@ -1,0 +1,33 @@
+{
+  "v": 1,
+  "records": [
+    {
+      "v": 1,
+      "kdf": {
+        "algo": "PBKDF2",
+        "hash": "SHA-256",
+        "iterations": 250000,
+        "salt": "PRJgVXqlBFEKZlMmuARcdg=="
+      },
+      "cipher": {
+        "algo": "AES-GCM",
+        "iv": "19SR5SUiCtchoGbN"
+      },
+      "ciphertext": "7eyRMAXLTauVOtwuzB7mtV+CglWTOJqQT/WmRs5wKjBpeuHS0wR14TiJNz0ornc="
+    },
+    {
+      "v": 1,
+      "kdf": {
+        "algo": "PBKDF2",
+        "hash": "SHA-256",
+        "iterations": 250000,
+        "salt": "6yE2C8gr48e7tsi5IlljpA=="
+      },
+      "cipher": {
+        "algo": "AES-GCM",
+        "iv": "bYUlK/Li4FCGd6u6"
+      },
+      "ciphertext": "vj4ue23rdRZqFGij6iXARtcNsN0jMHVmWVnWE+Z2fdv9SF5LxI+rdDZzF6iPtqM="
+    }
+  ]
+}
